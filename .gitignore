@@ -1,0 +1,13 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Secrets (contains ZABBIX_TOKEN) — only .env.example is versioned
+.env
+
+# Persisted uptime history (volume)
+data/*.json
+!data/.gitkeep
+
+# Logs
+*.log

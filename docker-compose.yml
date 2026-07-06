@@ -1,0 +1,27 @@
+services:
+  status:
+    image: ghcr.io/marcelofmatos/zabbix-status-page:${IMAGE_TAG:-latest}
+    # To build locally instead of pulling from GHCR, uncomment:
+    # build: .
+    env_file: .env
+    environment:
+      HISTORY_FILE: /data/history.json
+    # Runs as the uid/gid that owns ./data on the host so the container can
+    # write the uptime history to the bind mount. Adjust PUID/PGID in .env if needed.
+    user: "${PUID:-1000}:${PGID:-1000}"
+    volumes:
+      - ./data:/data
+    ports:
+      - "${PORT:-8080}:8080"
+    restart: unless-stopped
+
+    # --- Optional: expose behind a Traefik reverse proxy on an external `web` network ---
+    # networks: [web]
+    # labels:
+    #   - traefik.enable=true
+    #   - traefik.http.routers.status.rule=Host(`status.example.com`)
+    #   - traefik.http.services.status.loadbalancer.server.port=8080
+
+# networks:
+#   web:
+#     external: true

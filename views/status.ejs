@@ -1,0 +1,192 @@
+<%
+  const fmtDateTime = (value) => {
+    if (!value) return '—';
+    try {
+      return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short', timeStyle: 'short', timeZone: config.tz,
+      }).format(new Date(value));
+    } catch { return String(value); }
+  };
+  const fmtClock = (clockSeconds) => fmtDateTime(new Date(clockSeconds * 1000));
+  const relTime = (clockSeconds) => {
+    const diff = Math.round((Date.now() / 1000) - clockSeconds);
+    const abs = Math.abs(diff);
+    const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });
+    if (abs < 60) return rtf.format(-Math.round(diff), 'second');
+    if (abs < 3600) return rtf.format(-Math.round(diff / 60), 'minute');
+    if (abs < 86400) return rtf.format(-Math.round(diff / 3600), 'hour');
+    return rtf.format(-Math.round(diff / 86400), 'day');
+  };
+  const stateClass = (s) => s ? `is-${s}` : 'is-nodata';
+  const stateLabel = (s) => s && STATES[s] ? STATES[s].label : 'Sem dados';
+
+  const bannerState = overall ? overall.state : null;
+  const bannerClass = overall ? `is-${overall.state}` : 'is-error';
+
+  const uptimePct = (series) => {
+    const known = series.filter((d) => d.state);
+    if (!known.length) return 'sem histórico';
+    const ok = known.filter((d) => d.state === 'operational').length;
+    return `${((ok / known.length) * 100).toFixed(2)}% operacional`;
+  };
+
+  const sections = (byGroups && groups.length)
+    ? groups.map((g) => ({ name: g.name, state: g.state, label: g.label, components: g.components }))
+    : (components.length ? [{ name: 'Componentes', state: null, label: null, components }] : []);
+
+  // Favicon dinâmico: cor conforme o estado mais grave atual (overall); cinza sem dados.
+  const faviconColors = {
+    operational: '#34d399', degraded: '#fbbf24', partial: '#fb923c', major: '#f87171',
+  };
+  const faviconColor = (bannerState && faviconColors[bannerState]) || '#9ca3af';
+  const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="${faviconColor}"/></svg>`;
+  const faviconHref = `data:image/svg+xml;base64,${Buffer.from(faviconSvg).toString('base64')}`;
+%><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="<%= meta.refreshSeconds %>">
+  <title><%= config.pageTitle %></title>
+  <link rel="icon" type="image/svg+xml" href="<%= faviconHref %>">
+  <link rel="stylesheet" href="/styles.css">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('zsp-theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+<div class="page">
+  <header class="masthead">
+    <div class="masthead__brand">
+      <span class="masthead__mark" aria-hidden="true"></span>
+      <div>
+        <p class="masthead__eyebrow">Painel de status</p>
+        <h1 class="masthead__title"><%= config.pageTitle %></h1>
+      </div>
+    </div>
+    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Alternar tema">
+      <span class="theme-toggle__dot"></span>
+    </button>
+  </header>
+
+  <section class="banner <%= bannerClass %>" role="status">
+    <span class="banner__glyph" aria-hidden="true"></span>
+    <div class="banner__body">
+      <% if (!overall) { %>
+        <p class="banner__headline">Não foi possível consultar o Zabbix no momento</p>
+        <p class="banner__sub">Estamos sem dados atualizados. Tentaremos novamente automaticamente.</p>
+      <% } else if (bannerState === 'operational') { %>
+        <p class="banner__headline">Todos os sistemas operacionais</p>
+        <p class="banner__sub">Nenhuma interrupção detectada no monitoramento.</p>
+      <% } else { %>
+        <p class="banner__headline"><%= overall.label %></p>
+        <p class="banner__sub">Há sistemas com incidentes em andamento. Detalhes abaixo.</p>
+      <% } %>
+    </div>
+  </section>
+
+  <% if (meta.stale && overall) { %>
+    <p class="stale-note">Dados possivelmente desatualizados — a última atualização pode não refletir o estado atual.</p>
+  <% } %>
+
+  <main class="components">
+    <% if (!sections.length) { %>
+      <p class="empty">Nenhum componente para exibir.</p>
+    <% } %>
+    <% sections.forEach((section) => { %>
+      <section class="group">
+        <div class="group__head">
+          <h2 class="group__name"><%= section.name %></h2>
+          <% if (section.state) { %><span class="badge <%= stateClass(section.state) %>"><%= section.label %></span><% } %>
+        </div>
+        <ul class="rows">
+          <% section.components.forEach((component) => {
+               const series = seriesByKey[component.key] || []; %>
+            <li class="row">
+              <div class="row__id">
+                <span class="row__dot <%= stateClass(component.state) %>" aria-hidden="true"></span>
+                <span class="row__name"><%= component.name %></span>
+                <span class="badge badge--sm <%= stateClass(component.state) %>"><%= component.label %></span>
+              </div>
+              <div class="uptime">
+                <div class="uptime__track" role="img"
+                     aria-label="Histórico de <%= series.length %> dias para <%= component.name %>">
+                  <% series.forEach((day) => { %><span class="uptime-day <%= stateClass(day.state) %>" title="<%= day.date %> — <%= stateLabel(day.state) %>"></span><% }) %>
+                </div>
+                <div class="uptime__scale">
+                  <span><%= series.length %> dias atrás</span>
+                  <span class="uptime__uptime"><%= uptimePct(series) %></span>
+                  <span>hoje</span>
+                </div>
+              </div>
+            </li>
+          <% }) %>
+        </ul>
+      </section>
+    <% }) %>
+  </main>
+
+  <% if (config.knowleads && incidents && incidents.length) { %>
+    <section class="incidents">
+      <h2 class="incidents__title">Incidentes ativos</h2>
+      <ul class="incident-list">
+        <% incidents.forEach((incident) => { %>
+          <li class="incident <%= stateClass(incident.state) %>">
+            <div class="incident__head">
+              <span class="badge <%= stateClass(incident.state) %>"><%= stateLabel(incident.state) %></span>
+              <span class="incident__name"><%= incident.name %></span>
+            </div>
+            <div class="incident__meta">
+              <% if (incident.host) { %><span class="incident__host"><%= incident.host.name %></span><% } %>
+              <time class="incident__time" datetime="<%= new Date(incident.clock * 1000).toISOString() %>">
+                <%= relTime(incident.clock) %> · <%= fmtClock(incident.clock) %>
+              </time>
+            </div>
+            <% if (config.knowleadsComments && incident.acknowledges && incident.acknowledges.length) { %>
+              <ul class="acks">
+                <% incident.acknowledges.forEach((ack) => { %>
+                  <li class="ack">
+                    <% if (ack.message) { %><p class="ack__msg"><%= ack.message %></p><% } %>
+                    <div class="ack__head">
+                      <time class="ack__time"><%= fmtClock(ack.clock) %></time>
+                    </div>
+                  </li>
+                <% }) %>
+              </ul>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+    </section>
+  <% } %>
+
+  <footer class="foot">
+    <p class="foot__updated">
+      Última atualização: <strong><%= fmtDateTime(meta.lastUpdatedAt) %></strong>
+    </p>
+    <p class="foot__refresh">Atualização automática a cada <%= meta.refreshSeconds %>s.</p>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var root = document.documentElement;
+      var isDark = getComputedStyle(root).getPropertyValue('color-scheme').indexOf('dark') !== -1
+        || root.getAttribute('data-theme') === 'dark'
+        || (!root.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      var next = isDark ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('zsp-theme', next); } catch (e) {}
+    });
+  })();
+</script>
+</body>
+</html>
