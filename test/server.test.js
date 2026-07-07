@@ -5,8 +5,8 @@ import { createApp, createPoller } from '../server.js';
 const baseConfig = {
   pageTitle: 'Status — Teste',
   pollIntervalSeconds: 45,
-  knowleads: true,
-  knowleadsComments: true,
+  knowledges: true,
+  knowledgesComments: true,
   statusByGroups: false,
   tz: 'America/Puerto_Rico',
 };

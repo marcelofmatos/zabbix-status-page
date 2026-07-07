@@ -153,7 +153,7 @@ describe('buildSnapshot', () => {
   const raw = { hostGroups, hosts, triggers, problems };
 
   function config(overrides = {}) {
-    return { statusByGroups: false, knowleads: false, knowleadsComments: false, ...overrides };
+    return { statusByGroups: false, knowledges: false, knowledgesComments: false, ...overrides };
   }
 
   test('component state is the worst of its active triggers, sorted by priority desc', () => {
@@ -227,25 +227,25 @@ describe('buildSnapshot', () => {
     assert.equal(groupB.state, 'major'); // major (102) vs operational (103)
   });
 
-  test('incidents is empty when knowleads is false', () => {
-    const snapshot = buildSnapshot(raw, config({ knowleads: false }), NOW);
+  test('incidents is empty when knowledges is false', () => {
+    const snapshot = buildSnapshot(raw, config({ knowledges: false }), NOW);
     assert.deepEqual(snapshot.incidents, []);
   });
 
   test('incidents resolve host via objectid -> trigger -> host', () => {
-    const snapshot = buildSnapshot(raw, config({ knowleads: true }), NOW);
+    const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
     const incident = snapshot.incidents.find((i) => i.eventid === '301');
     assert.deepEqual(incident.host, { hostid: '101', name: 'Host B' });
   });
 
   test('incident host is null when objectid does not match any trigger', () => {
-    const snapshot = buildSnapshot(raw, config({ knowleads: true }), NOW);
+    const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
     const incident = snapshot.incidents.find((i) => i.eventid === '303');
     assert.equal(incident.host, null);
   });
 
   test('incidents are sorted by clock desc', () => {
-    const snapshot = buildSnapshot(raw, config({ knowleads: true }), NOW);
+    const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
     assert.deepEqual(
       snapshot.incidents.map((i) => i.eventid),
       ['302', '303', '301']
@@ -253,21 +253,21 @@ describe('buildSnapshot', () => {
   });
 
   test('incident severity/state coercion', () => {
-    const snapshot = buildSnapshot(raw, config({ knowleads: true }), NOW);
+    const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
     const incident = snapshot.incidents.find((i) => i.eventid === '302');
     assert.equal(incident.severity, 4);
     assert.equal(incident.state, 'major');
     assert.equal(incident.clock, 2000);
   });
 
-  test('acknowledges are empty unless knowleadsComments is true', () => {
-    const snapshot = buildSnapshot(raw, config({ knowleads: true, knowleadsComments: false }), NOW);
+  test('acknowledges are empty unless knowledgesComments is true', () => {
+    const snapshot = buildSnapshot(raw, config({ knowledges: true, knowledgesComments: false }), NOW);
     const incident = snapshot.incidents.find((i) => i.eventid === '301');
     assert.deepEqual(incident.acknowledges, []);
   });
 
-  test('acknowledges are mapped with numeric clock/action and no author fields when knowleadsComments is true', () => {
-    const snapshot = buildSnapshot(raw, config({ knowleads: true, knowleadsComments: true }), NOW);
+  test('acknowledges are mapped with numeric clock/action and no author fields when knowledgesComments is true', () => {
+    const snapshot = buildSnapshot(raw, config({ knowledges: true, knowledgesComments: true }), NOW);
     const incident = snapshot.incidents.find((i) => i.eventid === '301');
     assert.deepEqual(incident.acknowledges, [
       { clock: 1050, message: 'looking into it', action: 1, userid: '5' },
@@ -284,7 +284,7 @@ describe('buildSnapshot', () => {
 
   test('is pure: does not mutate inputs', () => {
     const before = JSON.parse(JSON.stringify(raw));
-    buildSnapshot(raw, config({ statusByGroups: true, knowleads: true, knowleadsComments: true }), NOW);
+    buildSnapshot(raw, config({ statusByGroups: true, knowledges: true, knowledgesComments: true }), NOW);
     assert.deepEqual(raw, before);
   });
 });

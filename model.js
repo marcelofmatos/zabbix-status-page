@@ -95,7 +95,7 @@ function buildIncidents(problems, config, triggerById) {
         state: severityToState(severity),
         clock: Number(problem.clock),
         host,
-        acknowledges: config.knowleadsComments
+        acknowledges: config.knowledgesComments
           ? (problem.acknowledges || []).map((ack) => ({
               clock: Number(ack.clock),
               message: ack.message,
@@ -122,7 +122,7 @@ export function buildSnapshot({ hostGroups = [], hosts = [], triggers = [], prob
   const overallState = worstState(components.map((component) => component.state));
 
   const triggerById = new Map(triggers.map((trigger) => [String(trigger.triggerid), trigger]));
-  const incidents = config.knowleads ? buildIncidents(problems, config, triggerById) : [];
+  const incidents = config.knowledges ? buildIncidents(problems, config, triggerById) : [];
 
   return {
     generatedAt: now.toISOString(),

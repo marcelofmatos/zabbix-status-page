@@ -48,8 +48,8 @@ docker pull ghcr.io/marcelofmatos/zabbix-status-page:latest
 | `ZABBIX_GROUPS_IDS` | não | vazio | Lista CSV de IDs de host groups a incluir. Vazio = todos. |
 | `ZABBIX_HOSTS_IDS` | não | vazio | Lista CSV de IDs de hosts a incluir. Vazio = todos. |
 | `ZABBIX_STATUS_BY_GROUPS` | não | `off` | `on` agrega e exibe o status por host group. |
-| `ZABBIX_KNOWLEADS` | não | `off` | `on` exibe os incidentes em aberto (problemas ativos). |
-| `ZABBIX_KNOWLEADS_COMMENTS` | não | `off` | `on` inclui os comentários de reconhecimento (acknowledge) de cada incidente. |
+| `ZABBIX_KNOWLEDGES` | não | `off` | `on` exibe os incidentes em aberto (problemas ativos). |
+| `ZABBIX_KNOWLEDGES_COMMENTS` | não | `off` | `on` inclui os comentários de reconhecimento (acknowledge) de cada incidente. |
 | `PAGE_TITLE` | não | `Status` | Título exibido na página. |
 | `TZ` | não | `UTC` | Fuso usado para fechar o bucket diário do histórico. |
 | `PORT` | não | `8080` | Porta do servidor HTTP. |

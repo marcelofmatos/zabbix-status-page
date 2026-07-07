@@ -131,7 +131,7 @@
     <% }) %>
   </main>
 
-  <% if (config.knowleads && incidents && incidents.length) { %>
+  <% if (config.knowledges && incidents && incidents.length) { %>
     <section class="incidents">
       <h2 class="incidents__title">Incidentes ativos</h2>
       <ul class="incident-list">
@@ -147,7 +147,7 @@
                 <%= relTime(incident.clock) %> · <%= fmtClock(incident.clock) %>
               </time>
             </div>
-            <% if (config.knowleadsComments && incident.acknowledges && incident.acknowledges.length) { %>
+            <% if (config.knowledgesComments && incident.acknowledges && incident.acknowledges.length) { %>
               <ul class="acks">
                 <% incident.acknowledges.forEach((ack) => { %>
                   <li class="ack">

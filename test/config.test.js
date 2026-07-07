@@ -64,16 +64,16 @@ describe('loadConfig', () => {
 
   describe('flag parsing', () => {
     test('"on" is true', () => {
-      assert.equal(loadConfig({ ZABBIX_KNOWLEADS: 'on' }).knowleads, true);
+      assert.equal(loadConfig({ ZABBIX_KNOWLEDGES: 'on' }).knowledges, true);
     });
 
     test('"off" is false', () => {
-      assert.equal(loadConfig({ ZABBIX_KNOWLEADS: 'off' }).knowleads, false);
+      assert.equal(loadConfig({ ZABBIX_KNOWLEDGES: 'off' }).knowledges, false);
     });
 
     test('"true"/"false" accepted case-insensitively', () => {
-      assert.equal(loadConfig({ ZABBIX_KNOWLEADS: 'TRUE' }).knowleads, true);
-      assert.equal(loadConfig({ ZABBIX_KNOWLEADS: 'False' }).knowleads, false);
+      assert.equal(loadConfig({ ZABBIX_KNOWLEDGES: 'TRUE' }).knowledges, true);
+      assert.equal(loadConfig({ ZABBIX_KNOWLEDGES: 'False' }).knowledges, false);
     });
 
     test('"1"/"0" accepted', () => {
@@ -83,7 +83,7 @@ describe('loadConfig', () => {
 
     test('empty/missing value defaults to false', () => {
       assert.equal(loadConfig({}).statusByGroups, false);
-      assert.equal(loadConfig({ ZABBIX_KNOWLEADS_COMMENTS: '' }).knowleadsComments, false);
+      assert.equal(loadConfig({ ZABBIX_KNOWLEDGES_COMMENTS: '' }).knowledgesComments, false);
     });
 
     test('ZABBIX_TLS_INSECURE parses like a flag (default false)', () => {

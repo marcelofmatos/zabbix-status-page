@@ -85,7 +85,7 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
       sortorder: 'DESC',
       selectTags: 'extend',
     });
-    if (config.knowleadsComments) {
+    if (config.knowledgesComments) {
       params.selectAcknowledges = ['clock', 'message', 'action', 'userid'];
     }
     return call('problem.get', params);

@@ -8,7 +8,7 @@ const BASE_CONFIG = {
   groupIds: [],
   hostIds: [],
   minSeverity: 0,
-  knowleadsComments: false,
+  knowledgesComments: false,
 };
 
 function fakeFetch(result) {
@@ -196,7 +196,7 @@ describe('getActiveTriggers', () => {
 });
 
 describe('getProblems', () => {
-  test('builds params without selectAcknowledges when knowleadsComments is false', async () => {
+  test('builds params without selectAcknowledges when knowledgesComments is false', async () => {
     const fetchFn = fakeFetch([]);
     const client = createZabbixClient(BASE_CONFIG, { fetch: fetchFn });
 
@@ -213,9 +213,9 @@ describe('getProblems', () => {
     });
   });
 
-  test('includes selectAcknowledges when knowleadsComments is true', async () => {
+  test('includes selectAcknowledges when knowledgesComments is true', async () => {
     const fetchFn = fakeFetch([]);
-    const client = createZabbixClient({ ...BASE_CONFIG, knowleadsComments: true }, { fetch: fetchFn });
+    const client = createZabbixClient({ ...BASE_CONFIG, knowledgesComments: true }, { fetch: fetchFn });
 
     await client.getProblems();
 
