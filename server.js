@@ -18,11 +18,21 @@ function setState(next) {
   currentState = typeof next === 'function' ? next(currentState) : next;
 }
 
+function resolveOg(req, config) {
+  const base = (config.publicUrl || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+  let image = config.ogImage || '';
+  if (image && !/^https?:\/\//i.test(image)) {
+    image = base + (image.startsWith('/') ? image : `/${image}`);
+  }
+  return { url: `${base}/`, image };
+}
+
 export function createApp({ config, getState: readState, history }) {
   const app = express();
 
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
+  app.set('trust proxy', true);
 
   app.get('/healthz', (_req, res) => {
     res.type('text/plain').send('ok');
@@ -32,9 +42,10 @@ export function createApp({ config, getState: readState, history }) {
     res.json({ ...readState(), refreshSeconds: config.pollIntervalSeconds });
   });
 
-  app.get('/', (_req, res) => {
+  app.get('/', (req, res) => {
     const { snapshot, stale, lastError, lastUpdatedAt } = readState();
     const meta = { stale, lastError, lastUpdatedAt, refreshSeconds: config.pollIntervalSeconds };
+    const og = resolveOg(req, config);
 
     if (!snapshot) {
       res.render('status', {
@@ -46,6 +57,7 @@ export function createApp({ config, getState: readState, history }) {
         incidents: [],
         seriesByKey: {},
         meta,
+        og,
         STATES,
       });
       return;
@@ -65,6 +77,7 @@ export function createApp({ config, getState: readState, history }) {
       incidents: snapshot.incidents,
       seriesByKey,
       meta,
+      og,
       STATES,
     });
   });

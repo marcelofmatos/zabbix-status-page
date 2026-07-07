@@ -136,6 +136,52 @@ describe('createApp', () => {
     });
   });
 
+  test('GET / renders Open Graph tags with an absolute image from PUBLIC_URL', async () => {
+    const config = {
+      ...baseConfig,
+      pageTitle: 'Status Example',
+      siteName: 'Example Org',
+      pageDescription: 'Disponibilidade dos serviços em tempo real',
+      ogImage: '/og-image.png',
+      publicUrl: 'https://status.example.com',
+    };
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config, getState: () => state, history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      assert.match(html, /<meta property="og:title" content="Status Example">/);
+      assert.match(html, /<meta property="og:site_name" content="Example Org">/);
+      assert.match(html, /<meta property="og:description" content="Disponibilidade dos serviços em tempo real">/);
+      assert.match(html, /<meta property="og:url" content="https:\/\/status\.example\.com\/">/);
+      assert.match(html, /<meta property="og:image" content="https:\/\/status\.example\.com\/og-image\.png">/);
+      assert.match(html, /<meta name="twitter:card" content="summary_large_image">/);
+      assert.match(html, /<meta name="description" content="Disponibilidade dos serviços em tempo real">/);
+    });
+  });
+
+  test('GET / derives og:url/og:image from the request when PUBLIC_URL is unset', async () => {
+    const config = { ...baseConfig, ogImage: '/og-image.png' };
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config, getState: () => state, history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      const host = base.replace(/^http:\/\//, '');
+      assert.match(html, new RegExp(`<meta property="og:url" content="http://${host.replace(/\./g, '\\.')}/">`));
+      assert.match(html, new RegExp(`<meta property="og:image" content="http://${host.replace(/\./g, '\\.')}/og-image\\.png">`));
+    });
+  });
+
+  test('GET / without OG_IMAGE uses twitter:card summary and emits no og:image', async () => {
+    const config = { ...baseConfig, pageDescription: 'sem imagem' };
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config, getState: () => state, history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      assert.match(html, /<meta name="twitter:card" content="summary">/);
+      assert.doesNotMatch(html, /property="og:image"/);
+    });
+  });
+
   test('GET / with snapshot null returns 200 (not 500) and the Zabbix failure message', async () => {
     const app = createApp({
       config: baseConfig,

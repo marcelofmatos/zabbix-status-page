@@ -3,6 +3,9 @@ const DEFAULTS = {
   pollIntervalSeconds: 60,
   historyDays: 90,
   pageTitle: 'Status',
+  pageDescription: '',
+  ogImage: '',
+  publicUrl: '',
   tz: 'UTC',
   minSeverity: 0,
 };
@@ -40,6 +43,7 @@ function buildApiUrl(baseUrl) {
 
 export function loadConfig(env = process.env) {
   const zabbixUrl = env.ZABBIX_URL || '';
+  const pageTitle = env.PAGE_TITLE || DEFAULTS.pageTitle;
 
   const config = {
     zabbixUrl,
@@ -54,7 +58,11 @@ export function loadConfig(env = process.env) {
     port: parseInt10(env.PORT, DEFAULTS.port),
     pollIntervalSeconds: parseInt10(env.POLL_INTERVAL_SECONDS, DEFAULTS.pollIntervalSeconds),
     historyDays: parseInt10(env.HISTORY_DAYS, DEFAULTS.historyDays),
-    pageTitle: env.PAGE_TITLE || DEFAULTS.pageTitle,
+    pageTitle,
+    pageDescription: env.PAGE_DESCRIPTION || DEFAULTS.pageDescription,
+    siteName: env.PAGE_SITE_NAME || pageTitle,
+    ogImage: env.OG_IMAGE || DEFAULTS.ogImage,
+    publicUrl: env.PUBLIC_URL || DEFAULTS.publicUrl,
     tz: env.TZ || DEFAULTS.tz,
     minSeverity: parseSeverity(env.ZABBIX_MIN_SEVERITY),
   };
