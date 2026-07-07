@@ -1,7 +1,14 @@
+import { Agent } from 'undici';
+
 const DEFAULT_TIMEOUT_MS = 15000;
 
 export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
   let nextId = 1;
+  // Quando ZABBIX_TLS_INSECURE está ligado, desativa a verificação do certificado
+  // APENAS nas chamadas ao Zabbix (via dispatcher undici) — não afeta o resto do processo.
+  const dispatcher = config.tlsInsecure
+    ? new Agent({ connect: { rejectUnauthorized: false } })
+    : undefined;
 
   async function call(method, params) {
     const id = nextId++;
@@ -13,6 +20,7 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
       },
       body: JSON.stringify({ jsonrpc: '2.0', method, params, id }),
       signal: AbortSignal.timeout(config.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS),
+      dispatcher,
     });
 
     if (!response.ok) {

@@ -56,6 +56,7 @@ docker pull ghcr.io/marcelofmatos/zabbix-status-page:latest
 | `POLL_INTERVAL_SECONDS` | não | `60` | Intervalo entre coletas no Zabbix. |
 | `HISTORY_DAYS` | não | `90` | Janela do histórico de uptime, em dias. |
 | `ZABBIX_MIN_SEVERITY` | não | `0` | Severidade mínima (0–5) considerada como problema. |
+| `ZABBIX_TLS_INSECURE` | não | `off` | `on` **desativa a verificação do certificado** TLS nas chamadas ao Zabbix (aceita self-signed / cadeia incompleta). Inseguro — ver seção abaixo. |
 | `HISTORY_FILE` | não | `/data/history.json` | Caminho do arquivo de histórico (definido pela imagem/stack). |
 | `IMAGE_TAG` | não | `latest` | Tag da imagem usada pela stack do compose. |
 
@@ -82,6 +83,27 @@ A página autentica por **token** (header `Authorization: Bearer`), disponível 
 > **Segurança:** o token herda as permissões do usuário associado; para uma página
 > pública, use um usuário *read-only* limitado aos grupos necessários. Para revogar,
 > desabilite ou exclua o token em **Users → API tokens**.
+
+## Certificado do Zabbix (self-signed / cadeia incompleta)
+
+Se o Zabbix usa um certificado **auto-assinado** ou não envia a cadeia completa, o poller
+falha com `UNABLE_TO_VERIFY_LEAF_SIGNATURE` ("unable to verify the first certificate").
+Duas formas de resolver:
+
+**Recomendado (seguro) — confiar na CA/certificado:** monte o certificado (ou a CA) no
+container e aponte `NODE_EXTRA_CA_CERTS` para ele. Mantém a verificação TLS ativa.
+
+```yaml
+    environment:
+      - NODE_EXTRA_CA_CERTS=/certs/zabbix-ca.pem
+    volumes:
+      - ./zabbix-ca.pem:/certs/zabbix-ca.pem:ro
+```
+
+**Rápido (inseguro) — pular a verificação:** defina `ZABBIX_TLS_INSECURE=on`. Isso desativa
+a verificação do certificado **apenas** nas chamadas ao Zabbix (não afeta o resto do
+processo). ⚠️ Permite ataques *man-in-the-middle* — use só em rede confiável e prefira a
+opção da CA quando possível.
 
 ## Volume e permissões
 

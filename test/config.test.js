@@ -85,6 +85,11 @@ describe('loadConfig', () => {
       assert.equal(loadConfig({}).statusByGroups, false);
       assert.equal(loadConfig({ ZABBIX_KNOWLEADS_COMMENTS: '' }).knowleadsComments, false);
     });
+
+    test('ZABBIX_TLS_INSECURE parses like a flag (default false)', () => {
+      assert.equal(loadConfig({}).tlsInsecure, false);
+      assert.equal(loadConfig({ ZABBIX_TLS_INSECURE: 'on' }).tlsInsecure, true);
+    });
   });
 
   describe('defaults for optional vars', () => {

@@ -242,3 +242,21 @@ describe('getProblems', () => {
     assert.deepEqual(body.params.hostids, ['6']);
   });
 });
+
+describe('createZabbixClient TLS verification', () => {
+  test('does not pass a dispatcher by default (certificate is verified)', async () => {
+    const fetchFn = fakeFetch([]);
+    const client = createZabbixClient(BASE_CONFIG, { fetch: fetchFn });
+    await client.getHostGroups();
+    assert.equal(fetchFn.calls[0].options.dispatcher, undefined);
+  });
+
+  test('passes an undici dispatcher when tlsInsecure is on', async () => {
+    const fetchFn = fakeFetch([]);
+    const client = createZabbixClient({ ...BASE_CONFIG, tlsInsecure: true }, { fetch: fetchFn });
+    await client.getHostGroups();
+    const { dispatcher } = fetchFn.calls[0].options;
+    assert.ok(dispatcher, 'dispatcher deve estar definido quando tlsInsecure=on');
+    assert.equal(typeof dispatcher.dispatch, 'function');
+  });
+});
