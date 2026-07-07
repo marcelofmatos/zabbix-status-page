@@ -159,15 +159,29 @@ describe('createApp', () => {
     });
   });
 
-  test('GET / derives og:url/og:image from the request when PUBLIC_URL is unset', async () => {
+  test('GET / without PUBLIC_URL omits og:url and a relative OG_IMAGE (no Host reflection)', async () => {
     const config = { ...baseConfig, ogImage: '/og-image.png' };
     const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
     const app = createApp({ config, getState: () => state, history: fakeHistory() });
     await withServer(app, async (base) => {
       const html = await (await fetch(`${base}/`)).text();
+      // sem PUBLIC_URL confiável, não refletimos o Host: og:url e og:image relativo são omitidos
+      assert.doesNotMatch(html, /property="og:url"/);
+      assert.doesNotMatch(html, /property="og:image"/);
       const host = base.replace(/^http:\/\//, '');
-      assert.match(html, new RegExp(`<meta property="og:url" content="http://${host.replace(/\./g, '\\.')}/">`));
-      assert.match(html, new RegExp(`<meta property="og:image" content="http://${host.replace(/\./g, '\\.')}/og-image\\.png">`));
+      assert.doesNotMatch(html, new RegExp(host.replace(/\./g, '\\.')));
+    });
+  });
+
+  test('GET / without PUBLIC_URL keeps an absolute OG_IMAGE but still omits og:url', async () => {
+    const config = { ...baseConfig, ogImage: 'https://cdn.example.com/x.png' };
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config, getState: () => state, history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      assert.match(html, /<meta property="og:image" content="https:\/\/cdn\.example\.com\/x\.png">/);
+      assert.match(html, /<meta name="twitter:card" content="summary_large_image">/);
+      assert.doesNotMatch(html, /property="og:url"/);
     });
   });
 
