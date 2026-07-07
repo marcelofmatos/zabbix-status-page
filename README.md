@@ -50,7 +50,11 @@ docker pull ghcr.io/marcelofmatos/zabbix-status-page:latest
 | `ZABBIX_STATUS_BY_GROUPS` | não | `off` | `on` agrega e exibe o status por host group. |
 | `ZABBIX_KNOWLEDGES` | não | `off` | `on` exibe os incidentes em aberto (problemas ativos). |
 | `ZABBIX_KNOWLEDGES_COMMENTS` | não | `off` | `on` inclui os comentários de reconhecimento (acknowledge) de cada incidente. |
-| `PAGE_TITLE` | não | `Status` | Título exibido na página. |
+| `PAGE_TITLE` | não | `Status` | Título exibido na página (também vira `og:title`). |
+| `PAGE_DESCRIPTION` | não | vazio | Descrição da prévia do link ao compartilhar (WhatsApp/redes). Vira `og:description` e `meta description`. |
+| `PAGE_SITE_NAME` | não | = `PAGE_TITLE` | Nome do site/organização na prévia (`og:site_name`). |
+| `OG_IMAGE` | não | vazio | Imagem da prévia (`og:image`). URL absoluta, ou caminho servido de `public/` (ex.: `public/og-image.png` → `/og-image.png`). Recomendado ~1200×630 px. |
+| `PUBLIC_URL` | não | vazio | URL pública canônica (`og:url` e para tornar um `OG_IMAGE` relativo em absoluto). Vazio = derivada da requisição (funciona atrás de proxy). |
 | `TZ` | não | `UTC` | Fuso usado para fechar o bucket diário do histórico. |
 | `PORT` | não | `8080` | Porta do servidor HTTP. |
 | `POLL_INTERVAL_SECONDS` | não | `60` | Intervalo entre coletas no Zabbix. |

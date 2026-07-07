@@ -99,8 +99,16 @@ describe('loadConfig', () => {
       assert.equal(config.pollIntervalSeconds, 60);
       assert.equal(config.historyDays, 90);
       assert.equal(config.pageTitle, 'Status');
+      assert.equal(config.pageDescription, '');
+      assert.equal(config.ogImage, '');
+      assert.equal(config.publicUrl, '');
       assert.equal(config.tz, 'UTC');
       assert.equal(config.minSeverity, 0);
+    });
+
+    test('siteName defaults to pageTitle when PAGE_SITE_NAME is missing', () => {
+      assert.equal(loadConfig({}).siteName, 'Status');
+      assert.equal(loadConfig({ PAGE_TITLE: 'Meu Status' }).siteName, 'Meu Status');
     });
 
     test('uses provided values when present', () => {
@@ -109,12 +117,20 @@ describe('loadConfig', () => {
         POLL_INTERVAL_SECONDS: '30',
         HISTORY_DAYS: '7',
         PAGE_TITLE: 'Custom Title',
+        PAGE_DESCRIPTION: 'Disponibilidade em tempo real',
+        PAGE_SITE_NAME: 'Example Org',
+        OG_IMAGE: '/og-image.png',
+        PUBLIC_URL: 'https://status.example.com',
         TZ: 'America/Puerto_Rico',
       });
       assert.equal(config.port, 3000);
       assert.equal(config.pollIntervalSeconds, 30);
       assert.equal(config.historyDays, 7);
       assert.equal(config.pageTitle, 'Custom Title');
+      assert.equal(config.pageDescription, 'Disponibilidade em tempo real');
+      assert.equal(config.siteName, 'Example Org');
+      assert.equal(config.ogImage, '/og-image.png');
+      assert.equal(config.publicUrl, 'https://status.example.com');
       assert.equal(config.tz, 'America/Puerto_Rico');
     });
 
