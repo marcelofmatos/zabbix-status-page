@@ -86,7 +86,10 @@ function buildIncidents(problems, config, triggerById) {
       const trigger = triggerById.get(String(problem.objectid));
       const firstHost = trigger && trigger.hosts[0];
       const host = firstHost ? { hostid: firstHost.hostid, name: firstHost.name } : null;
-      const severity = Number(problem.severity);
+      // Usa a priority ATUAL do trigger — o Zabbix não atualiza a severidade de
+      // problemas já abertos quando a severidade do trigger muda. Fallback para a
+      // severidade gravada no problema quando o trigger não é encontrado.
+      const severity = trigger ? Number(trigger.priority) : Number(problem.severity);
 
       return {
         eventid: problem.eventid,

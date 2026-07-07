@@ -260,6 +260,47 @@ describe('buildSnapshot', () => {
     assert.equal(incident.clock, 2000);
   });
 
+  test('incident severity follows the current trigger priority, not the stored problem severity', () => {
+    // Reproduz o caso: a severidade do trigger foi rebaixada (4 -> 3), mas o
+    // problema já aberto guarda a severidade antiga (5). O incidente deve
+    // refletir a priority ATUAL do trigger, não a severidade congelada do problema.
+    const raw2 = {
+      hostGroups: [],
+      hosts: [],
+      triggers: [
+        {
+          triggerid: '500',
+          description: 'Bias current high',
+          priority: '3',
+          value: '1',
+          lastchange: '1000',
+          hosts: [{ hostid: '150', name: 'Switch' }],
+        },
+      ],
+      problems: [
+        {
+          eventid: '900',
+          name: 'Bias current high',
+          severity: '5',
+          clock: '1000',
+          objectid: '500',
+          acknowledged: '0',
+        },
+      ],
+    };
+    const snapshot = buildSnapshot(raw2, config({ knowledges: true }), NOW);
+    const incident = snapshot.incidents.find((i) => i.eventid === '900');
+    assert.equal(incident.severity, 3);
+    assert.equal(incident.state, 'partial');
+  });
+
+  test('incident falls back to stored problem severity when no trigger matches', () => {
+    const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
+    const incident = snapshot.incidents.find((i) => i.eventid === '303');
+    assert.equal(incident.severity, 3);
+    assert.equal(incident.state, 'partial');
+  });
+
   test('acknowledges are empty unless knowledgesComments is true', () => {
     const snapshot = buildSnapshot(raw, config({ knowledges: true, knowledgesComments: false }), NOW);
     const incident = snapshot.incidents.find((i) => i.eventid === '301');
