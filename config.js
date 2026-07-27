@@ -55,6 +55,7 @@ export function loadConfig(env = process.env) {
     knowledges: parseFlag(env.ZABBIX_KNOWLEDGES),
     knowledgesComments: parseFlag(env.ZABBIX_KNOWLEDGES_COMMENTS),
     tlsInsecure: parseFlag(env.ZABBIX_TLS_INSECURE),
+    publicMode: parseFlag(env.PUBLIC_MODE),
     port: parseInt10(env.PORT, DEFAULTS.port),
     pollIntervalSeconds: parseInt10(env.POLL_INTERVAL_SECONDS, DEFAULTS.pollIntervalSeconds),
     historyDays: parseInt10(env.HISTORY_DAYS, DEFAULTS.historyDays),

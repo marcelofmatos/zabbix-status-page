@@ -182,6 +182,74 @@ describe('createApp', () => {
     });
   });
 
+  test('PUBLIC_MODE hides host names + technical incident details, keeps group status and operator message', async () => {
+    const snapshot = {
+      generatedAt: '2026-07-06T12:00:00.000Z',
+      overall: { state: 'major', label: 'Interrupção grave' },
+      byGroups: true,
+      groups: [
+        {
+          groupid: '1',
+          name: 'Correio Eletrônico',
+          state: 'major',
+          label: 'Interrupção grave',
+          components: [
+            { key: '1001', hostid: '1001', name: 'MACUXI-SEGREDO', state: 'major', label: 'Interrupção grave', activeTriggers: [] },
+          ],
+        },
+      ],
+      components: [
+        { key: '1001', hostid: '1001', name: 'MACUXI-SEGREDO', state: 'major', label: 'Interrupção grave', activeTriggers: [] },
+      ],
+      incidents: [
+        {
+          eventid: '5001',
+          name: 'Port eth3 down on 10.0.0.1',
+          severity: 4,
+          state: 'major',
+          clock: 1751803200,
+          host: { hostid: '1001', name: 'MACUXI-SEGREDO' },
+          acknowledges: [{ clock: 1751803800, message: 'Estabilizando o serviço de e-mail', action: 6, userid: '7' }],
+        },
+      ],
+    };
+    const config = { ...baseConfig, publicMode: true, statusByGroups: true };
+    const app = createApp({ config, getState: () => makeState({ snapshot }), history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      // categoria (host group) com nome amigável e badge aparece
+      assert.match(html, /Correio Eletrônico/);
+      // nome de host NÃO aparece
+      assert.doesNotMatch(html, /MACUXI-SEGREDO/);
+      // descrição técnica do trigger (porta/IP) NÃO aparece
+      assert.doesNotMatch(html, /Port eth3 down/);
+      assert.doesNotMatch(html, /10\.0\.0\.1/);
+      // a comunicação do operador aparece
+      assert.match(html, /Estabilizando o serviço de e-mail/);
+    });
+  });
+
+  test('PUBLIC_MODE shows a neutral note for an incident without an operator message', async () => {
+    const snapshot = {
+      generatedAt: '2026-07-06T12:00:00.000Z',
+      overall: { state: 'major', label: 'Interrupção grave' },
+      byGroups: false,
+      groups: [],
+      components: [],
+      incidents: [
+        { eventid: '9', name: 'eth0 flapping', severity: 4, state: 'major', clock: 1751803200, host: { hostid: '1', name: 'SEGREDO' }, acknowledges: [] },
+      ],
+    };
+    const config = { ...baseConfig, publicMode: true };
+    const app = createApp({ config, getState: () => makeState({ snapshot }), history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      assert.match(html, /Estamos acompanhando esta ocorrência/);
+      assert.doesNotMatch(html, /eth0 flapping/);
+      assert.doesNotMatch(html, /SEGREDO/);
+    });
+  });
+
   test('GET / with snapshot null returns 200 (not 500) and the Zabbix failure message', async () => {
     const app = createApp({
       config: baseConfig,
