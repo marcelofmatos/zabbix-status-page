@@ -196,6 +196,23 @@ describe('buildSnapshot', () => {
     assert.equal(without.components.length, 3);
   });
 
+  test('groups that end up with no in-scope host are hidden', () => {
+    // host 101 pertence só ao Group A; com escopo em [101], o Group B fica vazio.
+    const snapshot = buildSnapshot({ ...raw, scopedHostIds: ['101'] }, config({ statusByGroups: true }), NOW);
+    assert.equal(snapshot.groups.length, 1);
+    assert.equal(snapshot.groups[0].groupid, '1');
+  });
+
+  test('empty groups are hidden even without tag scoping (e.g. filtered by hostIds)', () => {
+    // Sem escopo de tag, mas hostGroups inclui um grupo sem nenhum host presente.
+    const rawWithGhostGroup = {
+      ...raw,
+      hostGroups: [...hostGroups, { groupid: '99', name: 'Group Vazio' }],
+    };
+    const snapshot = buildSnapshot(rawWithGhostGroup, config({ statusByGroups: true }), NOW);
+    assert.ok(!snapshot.groups.some((g) => g.groupid === '99'));
+  });
+
   test('flat components list is always present, sorted by name', () => {
     const snapshot = buildSnapshot(raw, config({ statusByGroups: true }), NOW);
     assert.deepEqual(

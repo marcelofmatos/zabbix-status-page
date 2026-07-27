@@ -62,22 +62,25 @@ function byName(a, b) {
 }
 
 function buildGroups(hostGroups, hosts, componentsByHostId) {
-  return hostGroups.map((group) => {
-    const components = hosts
-      .filter((host) => (host.hostgroups || []).some((hg) => String(hg.groupid) === String(group.groupid)))
-      .map((host) => componentsByHostId.get(String(host.hostid)))
-      .sort(byName);
+  return hostGroups
+    .map((group) => {
+      const components = hosts
+        .filter((host) => (host.hostgroups || []).some((hg) => String(hg.groupid) === String(group.groupid)))
+        .map((host) => componentsByHostId.get(String(host.hostid)))
+        .sort(byName);
 
-    const state = worstState(components.map((component) => component.state));
+      const state = worstState(components.map((component) => component.state));
 
-    return {
-      groupid: group.groupid,
-      name: group.name,
-      state,
-      label: STATES[state].label,
-      components,
-    };
-  });
+      return {
+        groupid: group.groupid,
+        name: group.name,
+        state,
+        label: STATES[state].label,
+        components,
+      };
+    })
+    // Esconde grupos que ficaram sem componentes (ex.: nenhum host em escopo pela tag).
+    .filter((group) => group.components.length > 0);
 }
 
 function buildIncidents(problems, config, triggerById) {
