@@ -114,6 +114,28 @@ function buildIncidents(problems, config, triggerById) {
     .sort((a, b) => b.clock - a.clock);
 }
 
+// Achata os comentários de acknowledge (mensagens postadas por operadores no Zabbix)
+// de todos os incidentes numa lista única, cada um carregando o tipo de interrupção do
+// incidente a que pertence. Ignora acks sem texto (ex.: mudança de status sem comentário).
+export function buildMessages(incidents = [], { order = 'desc', limit = null } = {}) {
+  const items = [];
+  for (const incident of incidents) {
+    const type = (STATES[incident.state] || STATES.operational).label;
+    for (const ack of incident.acknowledges || []) {
+      const message = (ack.message || '').trim();
+      if (!message) continue;
+      items.push({ clock: Number(ack.clock), type, message });
+    }
+  }
+  items.sort((a, b) => (order === 'asc' ? a.clock - b.clock : b.clock - a.clock));
+  const sliced = limit == null ? items : items.slice(0, limit);
+  return sliced.map((item) => ({
+    time: new Date(item.clock * 1000).toISOString(),
+    type: item.type,
+    message: item.message,
+  }));
+}
+
 export function buildSnapshot({ hostGroups = [], hosts = [], triggers = [], problems = [], scopedHostIds = null }, config, now = new Date()) {
   const triggersByHostId = groupTriggersByHostId(triggers);
 
