@@ -110,15 +110,18 @@
   <% } %>
 
   <main class="components">
-    <% if (!sections.length) { %>
+    <%# Modo público: mostra só o status por grupo (sem listar hosts individuais). %>
+    <% const visibleSections = config.publicMode ? sections.filter((s) => s.state) : sections; %>
+    <% if (!visibleSections.length && !config.publicMode) { %>
       <p class="empty">Nenhum componente para exibir.</p>
     <% } %>
-    <% sections.forEach((section) => { %>
+    <% visibleSections.forEach((section) => { %>
       <section class="group">
         <div class="group__head">
           <h2 class="group__name"><%= section.name %></h2>
           <% if (section.state) { %><span class="badge <%= stateClass(section.state) %>"><%= section.label %></span><% } %>
         </div>
+        <% if (!config.publicMode) { %>
         <ul class="rows">
           <% section.components.forEach((component) => {
                const series = seriesByKey[component.key] || []; %>
@@ -142,6 +145,7 @@
             </li>
           <% }) %>
         </ul>
+        <% } %>
       </section>
     <% }) %>
   </main>
@@ -154,14 +158,20 @@
           <li class="incident <%= stateClass(incident.state) %>">
             <div class="incident__head">
               <span class="badge <%= stateClass(incident.state) %>"><%= stateLabel(incident.state) %></span>
-              <span class="incident__name"><%= incident.name %></span>
+              <%# Modo público: oculta a descrição técnica do trigger (portas, interfaces). %>
+              <% if (!config.publicMode) { %><span class="incident__name"><%= incident.name %></span><% } %>
             </div>
             <div class="incident__meta">
-              <% if (incident.host) { %><span class="incident__host"><%= incident.host.name %></span><% } %>
+              <% if (incident.host && !config.publicMode) { %><span class="incident__host"><%= incident.host.name %></span><% } %>
               <time class="incident__time" datetime="<%= new Date(incident.clock * 1000).toISOString() %>">
                 <%= relTime(incident.clock) %> · <%= fmtClock(incident.clock) %>
               </time>
             </div>
+            <%# Modo público sem comentário do operador: mensagem neutra no lugar do detalhe técnico. %>
+            <% const pubMsgs = (incident.acknowledges || []).filter((a) => a.message); %>
+            <% if (config.publicMode && !pubMsgs.length) { %>
+              <p class="incident__note">Estamos acompanhando esta ocorrência.</p>
+            <% } %>
             <% if (config.knowledgesComments && incident.acknowledges && incident.acknowledges.length) { %>
               <ul class="acks">
                 <% incident.acknowledges.forEach((ack) => { %>

@@ -90,6 +90,11 @@ describe('loadConfig', () => {
       assert.equal(loadConfig({}).tlsInsecure, false);
       assert.equal(loadConfig({ ZABBIX_TLS_INSECURE: 'on' }).tlsInsecure, true);
     });
+
+    test('PUBLIC_MODE parses like a flag (default false)', () => {
+      assert.equal(loadConfig({}).publicMode, false);
+      assert.equal(loadConfig({ PUBLIC_MODE: 'on' }).publicMode, true);
+    });
   });
 
   describe('defaults for optional vars', () => {
