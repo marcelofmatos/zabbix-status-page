@@ -62,6 +62,38 @@ describe('loadConfig', () => {
     });
   });
 
+  describe('ZABBIX_TAGS parsing', () => {
+    test('missing/empty yields empty array', () => {
+      assert.deepEqual(loadConfig({}).tags, []);
+      assert.deepEqual(loadConfig({ ZABBIX_TAGS: '' }).tags, []);
+    });
+
+    test('tag=value yields an exact-match entry', () => {
+      assert.deepEqual(loadConfig({ ZABBIX_TAGS: 'scope=availability' }).tags, [
+        { tag: 'scope', value: 'availability' },
+      ]);
+    });
+
+    test('tag without "=" yields a value-less (exists) entry', () => {
+      assert.deepEqual(loadConfig({ ZABBIX_TAGS: 'scope' }).tags, [
+        { tag: 'scope', value: null },
+      ]);
+    });
+
+    test('multiple tags separated by comma, trimmed', () => {
+      assert.deepEqual(loadConfig({ ZABBIX_TAGS: ' scope=availability , team ' }).tags, [
+        { tag: 'scope', value: 'availability' },
+        { tag: 'team', value: null },
+      ]);
+    });
+
+    test('keeps everything after the first "=" as the value', () => {
+      assert.deepEqual(loadConfig({ ZABBIX_TAGS: 'k=a=b' }).tags, [
+        { tag: 'k', value: 'a=b' },
+      ]);
+    });
+  });
+
   describe('flag parsing', () => {
     test('"on" is true', () => {
       assert.equal(loadConfig({ ZABBIX_KNOWLEDGES: 'on' }).knowledges, true);

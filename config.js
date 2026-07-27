@@ -18,6 +18,18 @@ function parseCsv(value) {
     .filter((item) => item.length > 0);
 }
 
+// Cada item de ZABBIX_TAGS vira { tag, value }. "scope=availability" → match exato
+// pelo valor; "scope" (sem "=") → value null, casa qualquer valor (existência da tag).
+function parseTags(value) {
+  return parseCsv(value)
+    .map((item) => {
+      const idx = item.indexOf('=');
+      if (idx === -1) return { tag: item, value: null };
+      return { tag: item.slice(0, idx).trim(), value: item.slice(idx + 1).trim() };
+    })
+    .filter((entry) => entry.tag.length > 0);
+}
+
 function parseFlag(value) {
   if (value === undefined || value === null) return false;
   const normalized = String(value).trim().toLowerCase();
@@ -51,6 +63,7 @@ export function loadConfig(env = process.env) {
     apiUrl: buildApiUrl(zabbixUrl),
     groupIds: parseCsv(env.ZABBIX_GROUPS_IDS),
     hostIds: parseCsv(env.ZABBIX_HOSTS_IDS),
+    tags: parseTags(env.ZABBIX_TAGS),
     statusByGroups: parseFlag(env.ZABBIX_STATUS_BY_GROUPS),
     knowledges: parseFlag(env.ZABBIX_KNOWLEDGES),
     knowledgesComments: parseFlag(env.ZABBIX_KNOWLEDGES_COMMENTS),

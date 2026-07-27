@@ -47,6 +47,7 @@ docker pull ghcr.io/marcelofmatos/zabbix-status-page:latest
 | `ZABBIX_TOKEN` | sim | — | Token de API (Bearer) usado nas chamadas JSON-RPC. |
 | `ZABBIX_GROUPS_IDS` | não | vazio | Lista CSV de IDs de host groups a incluir. Vazio = todos. |
 | `ZABBIX_HOSTS_IDS` | não | vazio | Lista CSV de IDs de hosts a incluir. Vazio = todos. |
+| `ZABBIX_TAGS` | não | vazio | Filtra o painel por etiqueta (tag) de trigger. `nome=valor` casa o valor exato; só `nome` casa qualquer valor. Vários separados por vírgula. Só triggers/problemas com a tag afetam status/incidentes/`/api/messages`, e hosts sem trigger com a tag somem do painel. Vazio = sem filtro. Ex.: `scope=availability`. |
 | `ZABBIX_STATUS_BY_GROUPS` | não | `off` | `on` agrega e exibe o status por host group. |
 | `ZABBIX_KNOWLEDGES` | não | `off` | `on` exibe os incidentes em aberto (problemas ativos). |
 | `ZABBIX_KNOWLEDGES_COMMENTS` | não | `off` | `on` inclui os comentários de reconhecimento (acknowledge) de cada incidente. |

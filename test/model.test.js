@@ -174,6 +174,28 @@ describe('buildSnapshot', () => {
     assert.deepEqual(hostC.activeTriggers, []);
   });
 
+  test('scopedHostIds hides hosts outside the scope from components', () => {
+    const snapshot = buildSnapshot({ ...raw, scopedHostIds: ['102'] }, config(), NOW);
+    assert.equal(snapshot.components.length, 1);
+    assert.equal(snapshot.components[0].hostid, '102');
+  });
+
+  test('scopedHostIds also restricts hosts within groups', () => {
+    const snapshot = buildSnapshot({ ...raw, scopedHostIds: ['102'] }, config({ statusByGroups: true }), NOW);
+    for (const group of snapshot.groups) {
+      for (const component of group.components) {
+        assert.equal(component.hostid, '102');
+      }
+    }
+  });
+
+  test('scopedHostIds null (default) keeps all hosts — backwards compatible', () => {
+    const withNull = buildSnapshot({ ...raw, scopedHostIds: null }, config(), NOW);
+    const without = buildSnapshot(raw, config(), NOW);
+    assert.equal(withNull.components.length, 3);
+    assert.equal(without.components.length, 3);
+  });
+
   test('flat components list is always present, sorted by name', () => {
     const snapshot = buildSnapshot(raw, config({ statusByGroups: true }), NOW);
     assert.deepEqual(

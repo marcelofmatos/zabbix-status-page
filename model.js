@@ -111,16 +111,21 @@ function buildIncidents(problems, config, triggerById) {
     .sort((a, b) => b.clock - a.clock);
 }
 
-export function buildSnapshot({ hostGroups = [], hosts = [], triggers = [], problems = [] }, config, now = new Date()) {
+export function buildSnapshot({ hostGroups = [], hosts = [], triggers = [], problems = [], scopedHostIds = null }, config, now = new Date()) {
   const triggersByHostId = groupTriggersByHostId(triggers);
 
-  const components = hosts
+  // Quando há filtro de tag, só entram no painel os hosts em escopo (que têm algum
+  // trigger com a tag). scopedHostIds null = sem filtro (comportamento anterior).
+  const inScope = scopedHostIds ? new Set(scopedHostIds.map(String)) : null;
+  const visibleHosts = inScope ? hosts.filter((host) => inScope.has(String(host.hostid))) : hosts;
+
+  const components = visibleHosts
     .map((host) => buildComponent(host, triggersByHostId.get(String(host.hostid)) || []))
     .sort(byName);
 
   const componentsByHostId = new Map(components.map((component) => [component.key, component]));
 
-  const groups = config.statusByGroups ? buildGroups(hostGroups, hosts, componentsByHostId) : [];
+  const groups = config.statusByGroups ? buildGroups(hostGroups, visibleHosts, componentsByHostId) : [];
 
   const overallState = worstState(components.map((component) => component.state));
 
