@@ -30,13 +30,14 @@ function parseMessagesQuery(query) {
   return { limit, order };
 }
 
-function resolveOg(req, config) {
-  const base = (config.publicUrl || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+function resolveOg(config) {
+  const base = (config.publicUrl || '').replace(/\/$/, '');
   let image = config.ogImage || '';
   if (image && !/^https?:\/\//i.test(image)) {
-    image = base + (image.startsWith('/') ? image : `/${image}`);
+    // um caminho relativo só vira absoluto a partir de um PUBLIC_URL confiável
+    image = base ? base + (image.startsWith('/') ? image : `/${image}`) : '';
   }
-  return { url: `${base}/`, image };
+  return { url: base ? `${base}/` : '', image };
 }
 
 export function createApp({ config, getState: readState, history }) {
@@ -44,7 +45,6 @@ export function createApp({ config, getState: readState, history }) {
 
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
-  app.set('trust proxy', true);
 
   app.get('/healthz', (_req, res) => {
     res.type('text/plain').send('ok');
@@ -61,10 +61,10 @@ export function createApp({ config, getState: readState, history }) {
     res.json({ messages });
   });
 
-  app.get('/', (req, res) => {
+  app.get('/', (_req, res) => {
     const { snapshot, stale, lastError, lastUpdatedAt } = readState();
     const meta = { stale, lastError, lastUpdatedAt, refreshSeconds: config.pollIntervalSeconds };
-    const og = resolveOg(req, config);
+    const og = resolveOg(config);
 
     if (!snapshot) {
       res.render('status', {
@@ -109,13 +109,14 @@ export function createApp({ config, getState: readState, history }) {
 export function createPoller({ config, client, history, setState: writeState, now = () => new Date() }) {
   async function tick() {
     try {
-      const [hostGroups, hosts, triggers, problems] = await Promise.all([
+      const [hostGroups, hosts, triggers, problems, scopedHostIds] = await Promise.all([
         client.getHostGroups(),
         client.getHosts(),
         client.getActiveTriggers(),
         client.getProblems(),
+        client.getScopedHostIds(),
       ]);
-      const snapshot = buildSnapshot({ hostGroups, hosts, triggers, problems }, config, now());
+      const snapshot = buildSnapshot({ hostGroups, hosts, triggers, problems, scopedHostIds }, config, now());
       await history.update(snapshot, now());
       writeState({ snapshot, stale: false, lastError: null, lastUpdatedAt: now().toISOString() });
     } catch (err) {

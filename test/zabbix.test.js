@@ -193,6 +193,34 @@ describe('getActiveTriggers', () => {
     assert.deepEqual(body.params.groupids, ['1']);
     assert.deepEqual(body.params.hostids, ['2']);
   });
+
+  test('includes the tags filter (Equals/Exists) when config.tags is set', async () => {
+    const fetchFn = fakeFetch([]);
+    const client = createZabbixClient(
+      { ...BASE_CONFIG, tags: [{ tag: 'scope', value: 'availability' }, { tag: 'team', value: null }] },
+      { fetch: fetchFn }
+    );
+
+    await client.getActiveTriggers();
+
+    const body = lastRequestBody(fetchFn);
+    assert.equal(body.params.evaltype, 0);
+    assert.deepEqual(body.params.tags, [
+      { tag: 'scope', value: 'availability', operator: 1 },
+      { tag: 'team', operator: 4 },
+    ]);
+  });
+
+  test('omits the tags filter when config.tags is empty', async () => {
+    const fetchFn = fakeFetch([]);
+    const client = createZabbixClient({ ...BASE_CONFIG, tags: [] }, { fetch: fetchFn });
+
+    await client.getActiveTriggers();
+
+    const body = lastRequestBody(fetchFn);
+    assert.ok(!('tags' in body.params));
+    assert.ok(!('evaltype' in body.params));
+  });
 });
 
 describe('getProblems', () => {
@@ -240,6 +268,51 @@ describe('getProblems', () => {
     const body = lastRequestBody(fetchFn);
     assert.deepEqual(body.params.groupids, ['5']);
     assert.deepEqual(body.params.hostids, ['6']);
+  });
+
+  test('includes the tags filter when config.tags is set', async () => {
+    const fetchFn = fakeFetch([]);
+    const client = createZabbixClient(
+      { ...BASE_CONFIG, tags: [{ tag: 'scope', value: 'availability' }] },
+      { fetch: fetchFn }
+    );
+
+    await client.getProblems();
+
+    const body = lastRequestBody(fetchFn);
+    assert.equal(body.params.evaltype, 0);
+    assert.deepEqual(body.params.tags, [{ tag: 'scope', value: 'availability', operator: 1 }]);
+  });
+});
+
+describe('getScopedHostIds', () => {
+  test('returns null when no tags are configured', async () => {
+    const fetchFn = fakeFetch([]);
+    const client = createZabbixClient(BASE_CONFIG, { fetch: fetchFn });
+
+    const result = await client.getScopedHostIds();
+
+    assert.equal(result, null);
+    assert.equal(fetchFn.calls.length, 0); // não consulta o Zabbix sem tags
+  });
+
+  test('queries tagged triggers (no only_true) and returns the distinct host ids', async () => {
+    const fetchFn = fakeFetch([
+      { triggerid: '1', hosts: [{ hostid: '101' }, { hostid: '102' }] },
+      { triggerid: '2', hosts: [{ hostid: '102' }] },
+    ]);
+    const client = createZabbixClient(
+      { ...BASE_CONFIG, tags: [{ tag: 'scope', value: 'availability' }] },
+      { fetch: fetchFn }
+    );
+
+    const result = await client.getScopedHostIds();
+
+    assert.deepEqual(result, ['101', '102']);
+    const body = lastRequestBody(fetchFn);
+    assert.equal(body.method, 'trigger.get');
+    assert.ok(!('only_true' in body.params)); // hosts em escopo mesmo sem trigger disparado
+    assert.deepEqual(body.params.tags, [{ tag: 'scope', value: 'availability', operator: 1 }]);
   });
 });
 

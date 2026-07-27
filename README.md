@@ -47,14 +47,16 @@ docker pull ghcr.io/marcelofmatos/zabbix-status-page:latest
 | `ZABBIX_TOKEN` | sim | — | Token de API (Bearer) usado nas chamadas JSON-RPC. |
 | `ZABBIX_GROUPS_IDS` | não | vazio | Lista CSV de IDs de host groups a incluir. Vazio = todos. |
 | `ZABBIX_HOSTS_IDS` | não | vazio | Lista CSV de IDs de hosts a incluir. Vazio = todos. |
-| `ZABBIX_STATUS_BY_GROUPS` | não | `off` | `on` agrega e exibe o status por host group. |
+| `ZABBIX_TAGS` | não | vazio | Filtra o painel por etiqueta (tag) de trigger. `nome=valor` casa o valor exato; só `nome` casa qualquer valor. Vários separados por vírgula. Só triggers/problemas com a tag afetam status/incidentes/`/api/messages`, e hosts sem trigger com a tag somem do painel. Vazio = sem filtro. Ex.: `scope=availability`. |
+| `ZABBIX_STATUS_BY_GROUPS` | não | `off` | `on` agrega e exibe o status por host group. Grupos que ficarem sem componentes (ex.: por filtro de tag) são omitidos. |
 | `ZABBIX_KNOWLEDGES` | não | `off` | `on` exibe os incidentes em aberto (problemas ativos). |
 | `ZABBIX_KNOWLEDGES_COMMENTS` | não | `off` | `on` inclui os comentários de reconhecimento (acknowledge) de cada incidente. |
 | `PAGE_TITLE` | não | `Status` | Título exibido na página (também vira `og:title`). |
+| `PUBLIC_MODE` | não | `off` | `on` = modo comunidade: esconde detalhes técnicos. Mostra status só por categoria (host group), sem nomes de host; nos incidentes oculta a descrição técnica (portas/interfaces) e o host, exibindo só severidade + horário + o comentário do operador (ou uma nota neutra). Combine com `ZABBIX_STATUS_BY_GROUPS=on`. |
 | `PAGE_DESCRIPTION` | não | vazio | Descrição da prévia do link ao compartilhar (WhatsApp/redes). Vira `og:description` e `meta description`. |
 | `PAGE_SITE_NAME` | não | = `PAGE_TITLE` | Nome do site/organização na prévia (`og:site_name`). |
-| `OG_IMAGE` | não | vazio | Imagem da prévia (`og:image`). URL absoluta, ou caminho servido de `public/` (ex.: `public/og-image.png` → `/og-image.png`). Recomendado ~1200×630 px. |
-| `PUBLIC_URL` | não | vazio | URL pública canônica (`og:url` e para tornar um `OG_IMAGE` relativo em absoluto). Vazio = derivada da requisição (funciona atrás de proxy). |
+| `OG_IMAGE` | não | vazio | Imagem da prévia (`og:image`). URL absoluta, ou caminho servido de `public/` (ex.: `public/og-image.png` → `/og-image.png`). Um caminho relativo **exige `PUBLIC_URL`**; sem ele, use uma URL absoluta. Recomendado ~1200×630 px. |
+| `PUBLIC_URL` | não | vazio | URL pública canônica — fonte confiável do `og:url` e para tornar um `OG_IMAGE` relativo em absoluto. Vazio: `og:url` é omitido e um `OG_IMAGE` relativo é descartado (o header `Host` da requisição **não** é usado). Defina em produção. |
 | `TZ` | não | `UTC` | Fuso usado para fechar o bucket diário do histórico. |
 | `PORT` | não | `8080` | Porta do servidor HTTP. |
 | `POLL_INTERVAL_SECONDS` | não | `60` | Intervalo entre coletas no Zabbix. |

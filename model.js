@@ -62,22 +62,25 @@ function byName(a, b) {
 }
 
 function buildGroups(hostGroups, hosts, componentsByHostId) {
-  return hostGroups.map((group) => {
-    const components = hosts
-      .filter((host) => (host.hostgroups || []).some((hg) => String(hg.groupid) === String(group.groupid)))
-      .map((host) => componentsByHostId.get(String(host.hostid)))
-      .sort(byName);
+  return hostGroups
+    .map((group) => {
+      const components = hosts
+        .filter((host) => (host.hostgroups || []).some((hg) => String(hg.groupid) === String(group.groupid)))
+        .map((host) => componentsByHostId.get(String(host.hostid)))
+        .sort(byName);
 
-    const state = worstState(components.map((component) => component.state));
+      const state = worstState(components.map((component) => component.state));
 
-    return {
-      groupid: group.groupid,
-      name: group.name,
-      state,
-      label: STATES[state].label,
-      components,
-    };
-  });
+      return {
+        groupid: group.groupid,
+        name: group.name,
+        state,
+        label: STATES[state].label,
+        components,
+      };
+    })
+    // Esconde grupos que ficaram sem componentes (ex.: nenhum host em escopo pela tag).
+    .filter((group) => group.components.length > 0);
 }
 
 function buildIncidents(problems, config, triggerById) {
@@ -133,16 +136,21 @@ export function buildMessages(incidents = [], { order = 'desc', limit = null } =
   }));
 }
 
-export function buildSnapshot({ hostGroups = [], hosts = [], triggers = [], problems = [] }, config, now = new Date()) {
+export function buildSnapshot({ hostGroups = [], hosts = [], triggers = [], problems = [], scopedHostIds = null }, config, now = new Date()) {
   const triggersByHostId = groupTriggersByHostId(triggers);
 
-  const components = hosts
+  // Quando há filtro de tag, só entram no painel os hosts em escopo (que têm algum
+  // trigger com a tag). scopedHostIds null = sem filtro (comportamento anterior).
+  const inScope = scopedHostIds ? new Set(scopedHostIds.map(String)) : null;
+  const visibleHosts = inScope ? hosts.filter((host) => inScope.has(String(host.hostid))) : hosts;
+
+  const components = visibleHosts
     .map((host) => buildComponent(host, triggersByHostId.get(String(host.hostid)) || []))
     .sort(byName);
 
   const componentsByHostId = new Map(components.map((component) => [component.key, component]));
 
-  const groups = config.statusByGroups ? buildGroups(hostGroups, hosts, componentsByHostId) : [];
+  const groups = config.statusByGroups ? buildGroups(hostGroups, visibleHosts, componentsByHostId) : [];
 
   const overallState = worstState(components.map((component) => component.state));
 
