@@ -41,6 +41,19 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
     return params;
   }
 
+  // Filtro por etiqueta (tag) do Zabbix. operator 1 = Equals (tag=valor),
+  // 4 = Exists (só o nome da tag). evaltype 0 = And/Or (default).
+  const tags = config.tags || [];
+  function withTags(params) {
+    if (tags.length === 0) return params;
+    params.evaltype = 0;
+    params.tags = tags.map((t) =>
+      t.value == null
+        ? { tag: t.tag, operator: 4 }
+        : { tag: t.tag, value: t.value, operator: 1 });
+    return params;
+  }
+
   async function getHostGroups() {
     const params = {
       output: ['groupid', 'name'],
@@ -62,7 +75,7 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
   }
 
   async function getActiveTriggers() {
-    const params = withFilters({
+    const params = withTags(withFilters({
       output: ['triggerid', 'description', 'priority', 'value', 'lastchange'],
       selectHosts: ['hostid', 'name'],
       monitored: true,
@@ -73,23 +86,41 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
       min_severity: config.minSeverity,
       sortfield: 'priority',
       sortorder: 'DESC',
-    });
+    }));
     return call('trigger.get', params);
   }
 
+  // IDs dos hosts "em escopo": hosts que têm ao menos um trigger com a(s) tag(s)
+  // configurada(s) — independentemente de estar disparado. Usado para esconder do
+  // painel hosts fora do escopo. Retorna null quando não há filtro de tag.
+  async function getScopedHostIds() {
+    if (tags.length === 0) return null;
+    const params = withTags(withFilters({
+      output: ['triggerid'],
+      selectHosts: ['hostid'],
+      monitored: true,
+    }));
+    const triggers = await call('trigger.get', params);
+    const ids = new Set();
+    for (const trigger of triggers) {
+      for (const host of trigger.hosts || []) ids.add(String(host.hostid));
+    }
+    return [...ids];
+  }
+
   async function getProblems() {
-    const params = withFilters({
+    const params = withTags(withFilters({
       output: ['eventid', 'name', 'severity', 'clock', 'objectid', 'acknowledged'],
       recent: false,
       sortfield: ['eventid'],
       sortorder: 'DESC',
       selectTags: 'extend',
-    });
+    }));
     if (config.knowledgesComments) {
       params.selectAcknowledges = ['clock', 'message', 'action', 'userid'];
     }
     return call('problem.get', params);
   }
 
-  return { getHostGroups, getHosts, getActiveTriggers, getProblems };
+  return { getHostGroups, getHosts, getActiveTriggers, getProblems, getScopedHostIds };
 }

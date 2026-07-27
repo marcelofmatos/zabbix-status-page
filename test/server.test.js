@@ -291,12 +291,14 @@ describe('createPoller', () => {
     problems: [],
   };
 
-  function okClient() {
+  function okClient(overrides = {}) {
     return {
       getHostGroups: async () => fixture.hostGroups,
       getHosts: async () => fixture.hosts,
       getActiveTriggers: async () => fixture.triggers,
       getProblems: async () => fixture.problems,
+      getScopedHostIds: async () => null,
+      ...overrides,
     };
   }
 
@@ -329,6 +331,30 @@ describe('createPoller', () => {
     assert.equal(state.snapshot.components[0].name, 'Host A');
   });
 
+  test('tick() hides hosts outside the tag scope (scopedHostIds from the client)', async () => {
+    let state = makeState();
+    const setState = (next) => {
+      state = typeof next === 'function' ? next(state) : next;
+    };
+    const client = okClient({
+      getHosts: async () => [
+        { hostid: '1001', name: 'Host A', hostgroups: [] },
+        { hostid: '2002', name: 'Host B', hostgroups: [] },
+      ],
+      getScopedHostIds: async () => ['1001'], // só o Host A tem a tag
+    });
+    const poller = createPoller({
+      config: baseConfig,
+      client,
+      history: fakeHistory(),
+      setState,
+      now: () => new Date('2026-07-06T12:00:00.000Z'),
+    });
+    await poller.tick();
+    assert.equal(state.snapshot.components.length, 1);
+    assert.equal(state.snapshot.components[0].name, 'Host A');
+  });
+
   test('tick() with a failing client keeps previous snapshot and marks stale without throwing', async () => {
     const previous = populatedSnapshot();
     let state = makeState({ snapshot: previous, stale: false, lastError: null });
@@ -342,6 +368,7 @@ describe('createPoller', () => {
       getHosts: async () => [],
       getActiveTriggers: async () => [],
       getProblems: async () => [],
+      getScopedHostIds: async () => null,
     };
     const poller = createPoller({
       config: baseConfig,
