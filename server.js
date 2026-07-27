@@ -4,7 +4,7 @@ import express from 'express';
 import { loadConfig } from './config.js';
 import { createZabbixClient } from './zabbix.js';
 import { createHistoryStore } from './history.js';
-import { buildSnapshot, STATES } from './model.js';
+import { buildSnapshot, buildMessages, STATES } from './model.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,6 +16,18 @@ function getState() {
 
 function setState(next) {
   currentState = typeof next === 'function' ? next(currentState) : next;
+}
+
+const MESSAGES_LIMIT_DEFAULT = 1;
+const MESSAGES_LIMIT_MAX = 100;
+
+function parseMessagesQuery(query) {
+  const parsedLimit = Number.parseInt(query.limit, 10);
+  const limit = Number.isInteger(parsedLimit) && parsedLimit > 0
+    ? Math.min(parsedLimit, MESSAGES_LIMIT_MAX)
+    : MESSAGES_LIMIT_DEFAULT;
+  const order = query.order === 'asc' ? 'asc' : 'desc';
+  return { limit, order };
 }
 
 function resolveOg(req, config) {
@@ -40,6 +52,13 @@ export function createApp({ config, getState: readState, history }) {
 
   app.get('/api/status', (_req, res) => {
     res.json({ ...readState(), refreshSeconds: config.pollIntervalSeconds });
+  });
+
+  app.get('/api/messages', (req, res) => {
+    const { snapshot } = readState();
+    const { limit, order } = parseMessagesQuery(req.query);
+    const messages = snapshot ? buildMessages(snapshot.incidents, { order, limit }) : [];
+    res.json({ messages });
   });
 
   app.get('/', (req, res) => {

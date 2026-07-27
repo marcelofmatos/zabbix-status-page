@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { STATES, severityToState, worseState, worstState, buildSnapshot } from '../model.js';
+import { STATES, severityToState, worseState, worstState, buildSnapshot, buildMessages } from '../model.js';
 
 const NOW = new Date('2026-07-06T00:00:00Z');
 
@@ -327,5 +327,64 @@ describe('buildSnapshot', () => {
     const before = JSON.parse(JSON.stringify(raw));
     buildSnapshot(raw, config({ statusByGroups: true, knowledges: true, knowledgesComments: true }), NOW);
     assert.deepEqual(raw, before);
+  });
+});
+
+describe('buildMessages', () => {
+  const incidents = [
+    {
+      state: 'major',
+      acknowledges: [
+        { clock: 1751803800, message: 'Equipe acionada' },
+        { clock: 1751804400, message: 'Investigando o link' },
+      ],
+    },
+    {
+      state: 'degraded',
+      acknowledges: [
+        { clock: 1751803200, message: 'Latência alta observada' },
+        { clock: 1751804000, message: '' }, // sem texto — deve ser ignorado
+      ],
+    },
+  ];
+
+  test('flattens acks across incidents, newest first by default, with type from the incident', () => {
+    const messages = buildMessages(incidents);
+    // default limit = null aqui (função pura); ordena desc por clock
+    assert.equal(messages.length, 3);
+    assert.equal(messages[0].message, 'Investigando o link');
+    assert.equal(messages[0].type, 'Interrupção grave');
+    assert.equal(messages[0].time, new Date(1751804400 * 1000).toISOString());
+    assert.equal(messages[1].message, 'Equipe acionada');
+    assert.equal(messages[2].message, 'Latência alta observada');
+    assert.equal(messages[2].type, 'Degradado');
+  });
+
+  test('ignores acks without a text message', () => {
+    const messages = buildMessages(incidents);
+    assert.ok(messages.every((m) => m.message.length > 0));
+    assert.ok(!messages.some((m) => m.time === new Date(1751804000 * 1000).toISOString()));
+  });
+
+  test('order: "asc" sorts oldest first', () => {
+    const messages = buildMessages(incidents, { order: 'asc' });
+    assert.equal(messages[0].message, 'Latência alta observada');
+    assert.equal(messages[messages.length - 1].message, 'Investigando o link');
+  });
+
+  test('limit slices after sorting', () => {
+    const messages = buildMessages(incidents, { limit: 1 });
+    assert.equal(messages.length, 1);
+    assert.equal(messages[0].message, 'Investigando o link');
+  });
+
+  test('returns exactly {time, type, message} keys', () => {
+    const [m] = buildMessages(incidents, { limit: 1 });
+    assert.deepEqual(Object.keys(m).sort(), ['message', 'time', 'type']);
+  });
+
+  test('empty incidents yields empty list', () => {
+    assert.deepEqual(buildMessages([]), []);
+    assert.deepEqual(buildMessages(), []);
   });
 });

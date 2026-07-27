@@ -110,6 +110,42 @@ describe('createApp', () => {
     });
   });
 
+  test('GET /api/messages returns the latest operator ack as {time,type,message}', async () => {
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config: baseConfig, getState: () => state, history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/messages`);
+      assert.equal(res.status, 200);
+      const body = await res.json();
+      assert.equal(body.messages.length, 1); // default limit = 1
+      assert.deepEqual(Object.keys(body.messages[0]).sort(), ['message', 'time', 'type']);
+      assert.equal(body.messages[0].message, 'Equipe acionada & investigando');
+      assert.equal(body.messages[0].type, 'Interrupção grave');
+      assert.equal(body.messages[0].time, new Date(1751803800 * 1000).toISOString());
+    });
+  });
+
+  test('GET /api/messages honors ?limit= and returns available when fewer exist', async () => {
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config: baseConfig, getState: () => state, history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const body = await (await fetch(`${base}/api/messages?limit=5`)).json();
+      assert.equal(body.messages.length, 1); // só há 1 ack no snapshot
+      // limite inválido cai no default (1)
+      const body2 = await (await fetch(`${base}/api/messages?limit=abc`)).json();
+      assert.equal(body2.messages.length, 1);
+    });
+  });
+
+  test('GET /api/messages with no snapshot returns an empty list', async () => {
+    const app = createApp({ config: baseConfig, getState: () => makeState({ stale: true }), history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const res = await fetch(`${base}/api/messages`);
+      assert.equal(res.status, 200);
+      assert.deepEqual(await res.json(), { messages: [] });
+    });
+  });
+
   test('GET / with a populated snapshot renders banner, component and uptime segments, escaping data', async () => {
     const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
     const app = createApp({ config: baseConfig, getState: () => state, history: fakeHistory() });

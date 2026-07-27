@@ -64,6 +64,24 @@ docker pull ghcr.io/marcelofmatos/zabbix-status-page:latest
 | `HISTORY_FILE` | não | `/data/history.json` | Caminho do arquivo de histórico (definido pela imagem/stack). |
 | `IMAGE_TAG` | não | `latest` | Tag da imagem usada pela stack do compose. |
 
+## API JSON
+
+Além da página HTML, o servidor expõe:
+
+- `GET /healthz` — health check (texto `ok`).
+- `GET /api/status` — snapshot completo (estado geral, componentes, incidentes) em JSON.
+- `GET /api/messages` — os comentários de acknowledge mais recentes postados por operadores no Zabbix, achatados numa lista. Cada item tem:
+  - `time` — horário do comentário (ISO 8601, UTC);
+  - `type` — tipo de interrupção do incidente relacionado (ex.: `Interrupção grave`);
+  - `message` — o texto do comentário.
+
+  Parâmetros de query: `limit` (quantidade, default `1`, máx. `100`) e `order` (`desc` = mais novo primeiro, default; `asc`). Sem comentários, retorna `{ "messages": [] }`.
+
+  ```bash
+  curl -s https://status.example.com/api/messages          # última mensagem
+  curl -s 'https://status.example.com/api/messages?limit=5&order=desc'
+  ```
+
 ## Como gerar o token do Zabbix
 
 A página autentica por **token** (header `Authorization: Bearer`), disponível a partir do
