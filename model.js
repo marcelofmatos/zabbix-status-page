@@ -138,7 +138,17 @@ export function buildMessages(incidents = [], { order = 'desc', limit = null } =
   }));
 }
 
-export function buildSnapshot({ hostGroups = [], hosts = [], triggers = [], problems = [], scopedHostIds = null }, config, now = new Date()) {
+export function buildSnapshot(
+  { hostGroups = [], hosts = [], triggers: allTriggers = [], problems = [], scopedHostIds = null, scopedTriggerIds = null },
+  config,
+  now = new Date()
+) {
+  // Quando há filtro de tag, só contam os triggers que casam com ele; os problemas
+  // acompanham, pois buildIncidents só aceita problemas de triggers presentes aqui.
+  const triggerScope = scopedTriggerIds ? new Set(scopedTriggerIds.map(String)) : null;
+  const triggers = triggerScope
+    ? allTriggers.filter((trigger) => triggerScope.has(String(trigger.triggerid)))
+    : allTriggers;
   const triggersByHostId = groupTriggersByHostId(triggers);
 
   // Quando há filtro de tag, só entram no painel os hosts em escopo (que têm algum

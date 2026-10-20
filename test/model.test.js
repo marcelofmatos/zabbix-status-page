@@ -196,6 +196,19 @@ describe('buildSnapshot', () => {
     assert.equal(without.components.length, 3);
   });
 
+  test('scopedTriggerIds keeps only matching triggers in components and incidents', () => {
+    // Filtro por tag: 202 (Host down) fica fora; 201 e 203 entram.
+    const snapshot = buildSnapshot(
+      { ...raw, scopedTriggerIds: ['201', '203'] },
+      config({ knowledges: true }),
+      NOW
+    );
+    const hostA = snapshot.components.find((c) => c.hostid === '102');
+    assert.deepEqual(hostA.activeTriggers.map((t) => t.triggerid), ['203']);
+    assert.equal(hostA.state, 'operational');
+    assert.deepEqual(snapshot.incidents.map((i) => i.eventid), ['301']);
+  });
+
   test('groups that end up with no in-scope host are hidden', () => {
     // host 101 pertence só ao Group A; com escopo em [101], o Group B fica vazio.
     const snapshot = buildSnapshot({ ...raw, scopedHostIds: ['101'] }, config({ statusByGroups: true }), NOW);

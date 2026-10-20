@@ -2,6 +2,17 @@ import { Agent } from 'undici';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
+// Filtro por tag: as inclusões são OU (basta uma casar; sem inclusões, tudo passa) e
+// qualquer exclusão que case vence. Filtro com value null casa a tag com qualquer valor.
+export function matchesTagFilter(tags, filters) {
+  const matches = (filter) =>
+    tags.some((t) => t.tag === filter.tag && (filter.value == null || t.value === filter.value));
+  const includes = filters.filter((f) => !f.exclude);
+  const excludes = filters.filter((f) => f.exclude);
+  if (includes.length > 0 && !includes.some(matches)) return false;
+  return !excludes.some(matches);
+}
+
 export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
   let nextId = 1;
   // Quando ZABBIX_TLS_INSECURE está ligado, desativa a verificação do certificado
@@ -41,18 +52,7 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
     return params;
   }
 
-  // Filtro por etiqueta (tag) do Zabbix. operator 1 = Equals (tag=valor),
-  // 4 = Exists (só o nome da tag). evaltype 0 = And/Or (default).
   const tags = config.tags || [];
-  function withTags(params) {
-    if (tags.length === 0) return params;
-    params.evaltype = 0;
-    params.tags = tags.map((t) =>
-      t.value == null
-        ? { tag: t.tag, operator: 4 }
-        : { tag: t.tag, value: t.value, operator: 1 });
-    return params;
-  }
 
   async function getHostGroups() {
     const params = {
@@ -75,7 +75,7 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
   }
 
   async function getActiveTriggers() {
-    const params = withTags(withFilters({
+    const params = withFilters({
       output: ['triggerid', 'description', 'priority', 'value', 'lastchange'],
       selectHosts: ['hostid', 'name'],
       monitored: true,
@@ -86,41 +86,59 @@ export function createZabbixClient(config, { fetch: fetchFn = fetch } = {}) {
       min_severity: config.minSeverity,
       sortfield: 'priority',
       sortorder: 'DESC',
-    }));
+    });
     return call('trigger.get', params);
   }
 
-  // IDs dos hosts "em escopo": hosts que têm ao menos um trigger com a(s) tag(s)
-  // configurada(s) — independentemente de estar disparado. Usado para esconder do
-  // painel hosts fora do escopo. Retorna null quando não há filtro de tag.
-  async function getScopedHostIds() {
+  // Escopo do filtro por tag: triggers (em qualquer estado) cujas tags efetivas casam com
+  // o filtro, e os hosts deles. Tags efetivas = as do trigger + dos itens + do host + dos
+  // templates do host — as mesmas que o Zabbix grava no problema. O trigger.get só filtra
+  // pelas tags do próprio trigger, por isso o casamento é feito aqui. null = sem filtro.
+  async function getTagScope() {
     if (tags.length === 0) return null;
-    const params = withTags(withFilters({
+    const triggers = await call('trigger.get', withFilters({
       output: ['triggerid'],
+      selectTags: 'extend',
+      selectItems: ['itemid'],
       selectHosts: ['hostid'],
       monitored: true,
     }));
-    const triggers = await call('trigger.get', params);
-    const ids = new Set();
+    const itemIds = [...new Set(triggers.flatMap((t) => (t.items || []).map((i) => String(i.itemid))))];
+    const hostIds = [...new Set(triggers.flatMap((t) => (t.hosts || []).map((h) => String(h.hostid))))];
+    const [items, hosts] = await Promise.all([
+      call('item.get', { itemids: itemIds, output: ['itemid'], selectTags: 'extend', webitems: true }),
+      call('host.get', { hostids: hostIds, output: ['hostid'], selectTags: 'extend', selectInheritedTags: 'extend' }),
+    ]);
+    const itemTags = new Map(items.map((i) => [String(i.itemid), i.tags || []]));
+    const hostTags = new Map(hosts.map((h) => [String(h.hostid), [...(h.tags || []), ...(h.inheritedTags || [])]]));
+
+    const scope = { triggerIds: [], hostIds: new Set() };
     for (const trigger of triggers) {
-      for (const host of trigger.hosts || []) ids.add(String(host.hostid));
+      const effective = [
+        ...(trigger.tags || []),
+        ...(trigger.items || []).flatMap((i) => itemTags.get(String(i.itemid)) || []),
+        ...(trigger.hosts || []).flatMap((h) => hostTags.get(String(h.hostid)) || []),
+      ];
+      if (!matchesTagFilter(effective, tags)) continue;
+      scope.triggerIds.push(String(trigger.triggerid));
+      for (const host of trigger.hosts || []) scope.hostIds.add(String(host.hostid));
     }
-    return [...ids];
+    return { triggerIds: scope.triggerIds, hostIds: [...scope.hostIds] };
   }
 
   async function getProblems() {
-    const params = withTags(withFilters({
+    const params = withFilters({
       output: ['eventid', 'name', 'severity', 'clock', 'objectid', 'acknowledged'],
       recent: false,
       sortfield: ['eventid'],
       sortorder: 'DESC',
       selectTags: 'extend',
-    }));
+    });
     if (config.knowledgesComments) {
       params.selectAcknowledges = ['clock', 'message', 'action', 'userid'];
     }
     return call('problem.get', params);
   }
 
-  return { getHostGroups, getHosts, getActiveTriggers, getProblems, getScopedHostIds };
+  return { getHostGroups, getHosts, getActiveTriggers, getProblems, getTagScope };
 }

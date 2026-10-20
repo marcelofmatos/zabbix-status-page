@@ -18,14 +18,17 @@ function parseCsv(value) {
     .filter((item) => item.length > 0);
 }
 
-// Cada item de ZABBIX_TAGS vira { tag, value }. "scope=availability" → match exato
-// pelo valor; "scope" (sem "=") → value null, casa qualquer valor (existência da tag).
+// Cada item de ZABBIX_TAGS vira { tag, value, exclude }. "scope=availability" → match
+// exato pelo valor; "scope" (sem "=") → value null, casa qualquer valor (existência da
+// tag). Prefixo "!" marca exclusão ("!Application=Services").
 function parseTags(value) {
   return parseCsv(value)
     .map((item) => {
-      const idx = item.indexOf('=');
-      if (idx === -1) return { tag: item, value: null };
-      return { tag: item.slice(0, idx).trim(), value: item.slice(idx + 1).trim() };
+      const exclude = item.startsWith('!');
+      const body = exclude ? item.slice(1).trim() : item;
+      const idx = body.indexOf('=');
+      if (idx === -1) return { tag: body, value: null, exclude };
+      return { tag: body.slice(0, idx).trim(), value: body.slice(idx + 1).trim(), exclude };
     })
     .filter((entry) => entry.tag.length > 0);
 }

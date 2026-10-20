@@ -333,7 +333,7 @@ describe('createPoller', () => {
       getHosts: async () => fixture.hosts,
       getActiveTriggers: async () => fixture.triggers,
       getProblems: async () => fixture.problems,
-      getScopedHostIds: async () => null,
+      getTagScope: async () => null,
       ...overrides,
     };
   }
@@ -367,7 +367,7 @@ describe('createPoller', () => {
     assert.equal(state.snapshot.components[0].name, 'Host A');
   });
 
-  test('tick() hides hosts outside the tag scope (scopedHostIds from the client)', async () => {
+  test('tick() applies the tag scope from the client (hosts and triggers)', async () => {
     let state = makeState();
     const setState = (next) => {
       state = typeof next === 'function' ? next(state) : next;
@@ -377,7 +377,11 @@ describe('createPoller', () => {
         { hostid: '1001', name: 'Host A', hostgroups: [] },
         { hostid: '2002', name: 'Host B', hostgroups: [] },
       ],
-      getScopedHostIds: async () => ['1001'], // só o Host A tem a tag
+      getActiveTriggers: async () => [
+        { triggerid: 't1', description: 'In scope', priority: '4', lastchange: '1', hosts: [{ hostid: '1001', name: 'Host A' }] },
+        { triggerid: 't2', description: 'Out of scope', priority: '5', lastchange: '1', hosts: [{ hostid: '1001', name: 'Host A' }] },
+      ],
+      getTagScope: async () => ({ hostIds: ['1001'], triggerIds: ['t1'] }), // só o Host A / t1 têm a tag
     });
     const poller = createPoller({
       config: baseConfig,
@@ -389,6 +393,7 @@ describe('createPoller', () => {
     await poller.tick();
     assert.equal(state.snapshot.components.length, 1);
     assert.equal(state.snapshot.components[0].name, 'Host A');
+    assert.deepEqual(state.snapshot.components[0].activeTriggers.map((t) => t.triggerid), ['t1']);
   });
 
   test('tick() with a failing client keeps previous snapshot and marks stale without throwing', async () => {
@@ -404,7 +409,7 @@ describe('createPoller', () => {
       getHosts: async () => [],
       getActiveTriggers: async () => [],
       getProblems: async () => [],
-      getScopedHostIds: async () => null,
+      getTagScope: async () => null,
     };
     const poller = createPoller({
       config: baseConfig,
