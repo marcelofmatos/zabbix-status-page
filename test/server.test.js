@@ -172,6 +172,29 @@ describe('createApp', () => {
     });
   });
 
+  test('GET / labels the shorter uptime windows shown on narrow screens', async () => {
+    const days = Array.from({ length: 90 }, (_, i) => ({ date: `d${i}`, state: 'operational' }));
+    const history = { ...fakeHistory(), getSeries: () => days };
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config: baseConfig, getState: () => state, history });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      assert.match(html, /class="uptime__since uptime__since--all">90 dias atrás/);
+      assert.match(html, /class="uptime__since uptime__since--60">60 dias atrás/);
+      assert.match(html, /class="uptime__since uptime__since--30">30 dias atrás/);
+    });
+  });
+
+  test('GET / omits narrow-screen labels longer than the series', async () => {
+    const state = makeState({ snapshot: populatedSnapshot(), lastUpdatedAt: '2026-07-06T12:00:00.000Z' });
+    const app = createApp({ config: baseConfig, getState: () => state, history: fakeHistory() });
+    await withServer(app, async (base) => {
+      const html = await (await fetch(`${base}/`)).text();
+      assert.match(html, /uptime__since--all">2 dias atrás/);
+      assert.doesNotMatch(html, /uptime__since--(60|30)/);
+    });
+  });
+
   test('GET / renders Open Graph tags with an absolute image from PUBLIC_URL', async () => {
     const config = {
       ...baseConfig,

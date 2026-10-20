@@ -137,7 +137,8 @@
                   <% series.forEach((day) => { %><span class="uptime-day <%= stateClass(day.state) %>" title="<%= day.date %> — <%= stateLabel(day.state) %>"></span><% }) %>
                 </div>
                 <div class="uptime__scale">
-                  <span><%= series.length %> dias atrás</span>
+                  <span class="uptime__since uptime__since--all"><%= series.length %> dias atrás</span>
+                  <% [60, 30].filter((n) => n < series.length).forEach((n) => { %><span class="uptime__since uptime__since--<%= n %>"><%= n %> dias atrás</span><% }) %>
                   <span class="uptime__uptime"><%= uptimePct(series) %></span>
                   <span>hoje</span>
                 </div>
