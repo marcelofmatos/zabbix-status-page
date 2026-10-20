@@ -392,11 +392,31 @@ body {
 .row__dot.is-major { background: var(--st-major); box-shadow: 0 0 0 3px color-mix(in srgb, var(--st-major) 25%, transparent), 0 0 8px 0 var(--st-major); }
 
 /* ---------- Uptime bar ---------- */
+/* Sem espaço para todos os dias, os mais recentes (à direita) têm prioridade:
+   a barra encolhe para 60/30 dias e o excedente é cortado do lado antigo. */
+.uptime {
+  container-type: inline-size;
+}
 .uptime__track {
   display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
   gap: 2px;
   height: 34px;
   align-items: stretch;
+}
+.uptime__since--60,
+.uptime__since--30 { display: none; }
+@container (max-width: 359px) {
+  .uptime-day:nth-last-child(n + 61) { display: none; }
+  .uptime__since--all:has(~ .uptime__since--60) { display: none; }
+  .uptime__since--60 { display: inline; }
+}
+@container (max-width: 239px) {
+  .uptime-day:nth-last-child(n + 31) { display: none; }
+  .uptime__since--60 { display: none; }
+  .uptime__since--all:has(~ .uptime__since--30) { display: none; }
+  .uptime__since--30 { display: inline; }
 }
 .uptime-day {
   flex: 1 1 0;
