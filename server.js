@@ -109,14 +109,25 @@ export function createApp({ config, getState: readState, history }) {
 export function createPoller({ config, client, history, setState: writeState, now = () => new Date() }) {
   async function tick() {
     try {
-      const [hostGroups, hosts, triggers, problems, scopedHostIds] = await Promise.all([
+      const [hostGroups, hosts, triggers, problems, tagScope] = await Promise.all([
         client.getHostGroups(),
         client.getHosts(),
         client.getActiveTriggers(),
         client.getProblems(),
-        client.getScopedHostIds(),
+        client.getTagScope(),
       ]);
-      const snapshot = buildSnapshot({ hostGroups, hosts, triggers, problems, scopedHostIds }, config, now());
+      const snapshot = buildSnapshot(
+        {
+          hostGroups,
+          hosts,
+          triggers,
+          problems,
+          scopedHostIds: tagScope ? tagScope.hostIds : null,
+          scopedTriggerIds: tagScope ? tagScope.triggerIds : null,
+        },
+        config,
+        now()
+      );
       await history.update(snapshot, now());
       writeState({ snapshot, stale: false, lastError: null, lastUpdatedAt: now().toISOString() });
     } catch (err) {

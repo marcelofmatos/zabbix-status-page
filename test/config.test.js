@@ -70,26 +70,34 @@ describe('loadConfig', () => {
 
     test('tag=value yields an exact-match entry', () => {
       assert.deepEqual(loadConfig({ ZABBIX_TAGS: 'scope=availability' }).tags, [
-        { tag: 'scope', value: 'availability' },
+        { tag: 'scope', value: 'availability', exclude: false },
       ]);
     });
 
     test('tag without "=" yields a value-less (exists) entry', () => {
       assert.deepEqual(loadConfig({ ZABBIX_TAGS: 'scope' }).tags, [
-        { tag: 'scope', value: null },
+        { tag: 'scope', value: null, exclude: false },
       ]);
     });
 
     test('multiple tags separated by comma, trimmed', () => {
       assert.deepEqual(loadConfig({ ZABBIX_TAGS: ' scope=availability , team ' }).tags, [
-        { tag: 'scope', value: 'availability' },
-        { tag: 'team', value: null },
+        { tag: 'scope', value: 'availability', exclude: false },
+        { tag: 'team', value: null, exclude: false },
       ]);
     });
 
     test('keeps everything after the first "=" as the value', () => {
       assert.deepEqual(loadConfig({ ZABBIX_TAGS: 'k=a=b' }).tags, [
-        { tag: 'k', value: 'a=b' },
+        { tag: 'k', value: 'a=b', exclude: false },
+      ]);
+    });
+
+    test('"!" prefix marks an exclusion (with or without value)', () => {
+      assert.deepEqual(loadConfig({ ZABBIX_TAGS: 'environment=production, !Application=Services, !debug' }).tags, [
+        { tag: 'environment', value: 'production', exclude: false },
+        { tag: 'Application', value: 'Services', exclude: true },
+        { tag: 'debug', value: null, exclude: true },
       ]);
     });
   });

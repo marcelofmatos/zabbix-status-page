@@ -31,7 +31,11 @@ flowchart TD
   B --> C["host.get filtra grupos/HOSTS_IDS selectHostGroups"]
   C --> D["trigger.get value 1 selectHosts priority"]
   D --> E["problem.get recent false selectAcknowledges"]
-  E --> F["Mapear severidade Zabbix para estado"]
+  E --> T{"ZABBIX_TAGS definido?"}
+  T -- sim --> S["trigger.get + item.get + host.get<br/>casa tags do trigger, item, host e template<br/>inclusões OU, exclusão ! vence"]
+  S --> R["Mantém só triggers, hosts e incidentes em escopo"]
+  R --> F
+  T -- não --> F["Mapear severidade Zabbix para estado"]
   F --> G["Agregar componente para grupo para banner geral"]
   G --> H["Atualizar bucket do dia no history.json"]
   H --> I["Publicar snapshot em memória"]
