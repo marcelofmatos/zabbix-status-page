@@ -128,7 +128,12 @@ export function createPoller({ config, client, history, setState: writeState, no
   return { tick };
 }
 
+export function startupMessage(env = process.env) {
+  return `zabbix-status-page ${env.APP_VERSION || 'dev'} iniciando`;
+}
+
 async function main() {
+  console.log(startupMessage());
   const config = loadConfig();
   const client = createZabbixClient(config);
   const history = createHistoryStore({

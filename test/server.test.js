@@ -1,6 +1,6 @@
 import { test, describe, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createApp, createPoller } from '../server.js';
+import { createApp, createPoller, startupMessage } from '../server.js';
 
 const baseConfig = {
   pageTitle: 'Status — Teste',
@@ -416,5 +416,15 @@ describe('createPoller', () => {
     assert.equal(state.snapshot, previous);
     assert.equal(state.stale, true);
     assert.match(state.lastError, /conexão recusada/);
+  });
+});
+
+describe('startupMessage', () => {
+  test('informa a versão da imagem (APP_VERSION) no início do log', () => {
+    assert.equal(startupMessage({ APP_VERSION: '1.4.3' }), 'zabbix-status-page 1.4.3 iniciando');
+  });
+
+  test('usa "dev" quando APP_VERSION não está definida (rodando fora da imagem)', () => {
+    assert.equal(startupMessage({}), 'zabbix-status-page dev iniciando');
   });
 });
