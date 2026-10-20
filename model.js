@@ -85,14 +85,16 @@ function buildGroups(hostGroups, hosts, componentsByHostId) {
 
 function buildIncidents(problems, config, triggerById) {
   return problems
+    // Só problemas de triggers ativos: o Zabbix não fecha o problema ao desabilitar o
+    // trigger (o problem.get continua devolvendo), mas o frontend dele o esconde.
+    .filter((problem) => triggerById.has(String(problem.objectid)))
     .map((problem) => {
       const trigger = triggerById.get(String(problem.objectid));
-      const firstHost = trigger && trigger.hosts[0];
+      const firstHost = trigger.hosts[0];
       const host = firstHost ? { hostid: firstHost.hostid, name: firstHost.name } : null;
       // Usa a priority ATUAL do trigger — o Zabbix não atualiza a severidade de
-      // problemas já abertos quando a severidade do trigger muda. Fallback para a
-      // severidade gravada no problema quando o trigger não é encontrado.
-      const severity = trigger ? Number(trigger.priority) : Number(problem.severity);
+      // problemas já abertos quando a severidade do trigger muda.
+      const severity = Number(trigger.priority);
 
       return {
         eventid: problem.eventid,

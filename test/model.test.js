@@ -277,17 +277,18 @@ describe('buildSnapshot', () => {
     assert.deepEqual(incident.host, { hostid: '101', name: 'Host B' });
   });
 
-  test('incident host is null when objectid does not match any trigger', () => {
+  test('problems whose trigger is not active (disabled/deleted) are not shown as incidents', () => {
+    // O Zabbix não fecha o problema ao desabilitar o trigger: o problem.get continua
+    // devolvendo-o, mas o frontend do Zabbix o esconde. A página deve fazer o mesmo.
     const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
-    const incident = snapshot.incidents.find((i) => i.eventid === '303');
-    assert.equal(incident.host, null);
+    assert.ok(!snapshot.incidents.some((i) => i.eventid === '303'));
   });
 
   test('incidents are sorted by clock desc', () => {
     const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
     assert.deepEqual(
       snapshot.incidents.map((i) => i.eventid),
-      ['302', '303', '301']
+      ['302', '301']
     );
   });
 
@@ -329,13 +330,6 @@ describe('buildSnapshot', () => {
     };
     const snapshot = buildSnapshot(raw2, config({ knowledges: true }), NOW);
     const incident = snapshot.incidents.find((i) => i.eventid === '900');
-    assert.equal(incident.severity, 3);
-    assert.equal(incident.state, 'partial');
-  });
-
-  test('incident falls back to stored problem severity when no trigger matches', () => {
-    const snapshot = buildSnapshot(raw, config({ knowledges: true }), NOW);
-    const incident = snapshot.incidents.find((i) => i.eventid === '303');
     assert.equal(incident.severity, 3);
     assert.equal(incident.state, 'partial');
   });
